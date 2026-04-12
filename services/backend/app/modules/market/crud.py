@@ -5,7 +5,6 @@ OHLC data is sourced from ml.market_data_15m (the live engineered feature table)
 """
 
 from dataclasses import dataclass
-from datetime import date
 from typing import Any
 
 from sqlalchemy import text
@@ -69,38 +68,6 @@ def get_stock(session: Session, symbol: str) -> StockRecord | None:
     )
 
 
-def get_daily_prices(
-    session: Session,
-    symbol: str,
-    start: date,
-    end: date,
-) -> list[Any]:
-    """Return OHLC rows for a symbol within a date range."""
-    return list(
-        session.execute(
-            text(
-                """
-                SELECT
-                    d.datetime AS date,
-                    f.open_price::numeric AS open,
-                    f.high_price::numeric AS high,
-                    f.low_price::numeric AS low,
-                    f.close_price::numeric AS close,
-                    f.volume::numeric AS volume
-                FROM dw.fact_15min_stock_price f
-                JOIN dw.dim_date d ON f.fk_date_id = d.sk_date_id
-                JOIN dw.dim_instrument i ON f.fk_instrument_id = i.sk_instrument_id
-                WHERE i.symbol = :symbol
-                  AND d.date >= :start
-                  AND d.date <= :end
-                ORDER BY d.datetime ASC
-                """
-            ),
-            {"symbol": symbol.upper(), "start": start, "end": end},
-        ).fetchall()
-    )
-
-
 def get_coverage(session: Session, symbol: str) -> dict[str, Any]:
     """Return earliest date, latest date, and row count for a symbol."""
     row = session.execute(
@@ -117,39 +84,6 @@ def get_coverage(session: Session, symbol: str) -> dict[str, Any]:
         {"symbol": symbol.upper()},
     ).one()
     return {"data_from": row[0], "data_to": row[1], "rows": row[2]}
-
-
-def get_bars_for_features(session: Session, symbol: str, trading_days: int = 75) -> list[Any]:
-    """
-    Return the most recent `trading_days` worth of 15-min bars for feature engineering,
-    including trade_count and vwap.  Bars are returned oldest-first.
-    """
-    results = session.execute(
-        text(
-            """
-            SELECT date, open, high, low, close, volume, trade_count, vwap FROM (
-                SELECT
-                    d.datetime AS date,
-                    f.open_price::float AS open,
-                    f.high_price::float AS high,
-                    f.low_price::float AS low,
-                    f.close_price::float AS close,
-                    f.volume::float AS volume,
-                    COALESCE(f.trade_count, 0)::float AS trade_count,
-                    COALESCE(f.vwap, f.close_price)::float AS vwap
-                FROM dw.fact_15min_stock_price f
-                JOIN dw.dim_date d ON f.fk_date_id = d.sk_date_id
-                JOIN dw.dim_instrument i ON f.fk_instrument_id = i.sk_instrument_id
-                WHERE i.symbol = :symbol
-                ORDER BY d.datetime DESC
-                LIMIT :limit
-            ) sub
-            ORDER BY date ASC
-            """
-        ),
-        {"symbol": symbol.upper(), "limit": trading_days * 55},
-    ).fetchall()
-    return list(results)
 
 
 def get_recent_inference_bars(
