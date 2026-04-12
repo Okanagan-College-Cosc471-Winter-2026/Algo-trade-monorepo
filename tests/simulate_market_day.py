@@ -1,28 +1,31 @@
 #!/usr/bin/env python3
 """
-simulate_market_day.py — Intraday warm-refresh simulation for April 7, 2026.
+simulate_market_day.py — Full pipeline simulation: base train → April 7 intraday warm-refresh.
 
 Flow
 ────
-  Phase 0  NIBI health check
-  Phase 1  Setup NIBI (rsync repo + base model → run_root/current/)
-  Phase 2  Extract full parquet from old DB (2024-03-25 → 2026-04-07)
-
-  For each of the 26 April 7 bars (09:30–15:45 ET):
-    Step A  Slice parquet: all data up to this bar's close time
-    Step B  SCP slice to NIBI
-    Step C  sbatch warm_refresh.sbatch (adds 30 trees on top of previous model)
-    Step D  Poll squeue until COMPLETED
-    Step E  rsync updated model back (NIBI run_root/current/ → local)
-    Step F  Log timing for this window
-
-  Phase 3  Print full timing report (per-window table + totals)
+  Phase 0  NIBI health check (SSH + sbatch)
+  Phase 1  Setup NIBI (rsync repo to scratch)
+  Phase 2  Extract parquet from old DB (2024-03-25 → 2026-04-07)
+  Phase 3  SCP parquet to NIBI
+  Phase 4  BASE TRAIN on NIBI (data up to April 6 cutoff)
+             sbatch train_base.sbatch --parquet ... [--fast]
+             Polls until COMPLETED, rsyncs base model back
+  Phase 5  For each of the 26 April 7 bars (09:30–15:45 ET):
+             A  Slice parquet up to this bar's close time
+             B  SCP slice to NIBI
+             C  sbatch warm_refresh.sbatch (+30 trees on previous model)
+             D  Poll squeue until COMPLETED
+             E  rsync updated model back → local step_XX/
+             F  Log timing for this window
+  Phase 6  Print full timing report (per-window table + totals)
 
 Usage (from repo root, after: bash ml/ml/nibi/morning_login.sh):
-    python tests/simulate_market_day.py
-    python tests/simulate_market_day.py --dry-run          # Phase 0 only
-    python tests/simulate_market_day.py --skip-setup       # skip Phase 1
-    python tests/simulate_market_day.py --start-window 5   # resume from window 5
+    python tests/simulate_market_day.py              # full run (base + 26 windows)
+    python tests/simulate_market_day.py --fast       # 200-tree base (flow test, ~20 min)
+    python tests/simulate_market_day.py --dry-run    # Phase 0 only
+    python tests/simulate_market_day.py --skip-setup --skip-base  # resume: warm refresh only
+    python tests/simulate_market_day.py --start-window 5          # resume warm refresh at window 5
 
 Env vars:
     NIBI_USER, NIBI_SCRATCH  (from .env)
@@ -67,10 +70,12 @@ LOCAL_MODEL_DIR  = REPO_ROOT / "model_artifacts" / "sim_2026-04-07"
 CURRENT_LINK     = REPO_ROOT / "model_artifacts" / "current_base"
 
 # NIBI paths
-NIBI_ALGO_DIR   = f"{NIBI_SCRATCH}/algo"
-NIBI_RUN_ROOT   = f"{NIBI_SCRATCH}/ml/run_root"
-NIBI_SLICE_DIR  = f"{NIBI_SCRATCH}/data/slices"
-NIBI_SBATCH     = f"{NIBI_ALGO_DIR}/ml/ml/nibi/warm_refresh.sbatch"
+NIBI_ALGO_DIR        = f"{NIBI_SCRATCH}/algo"
+NIBI_RUN_ROOT        = f"{NIBI_SCRATCH}/ml/run_root"
+NIBI_SLICE_DIR       = f"{NIBI_SCRATCH}/data/slices"
+NIBI_FULL_PARQUET    = f"{NIBI_SCRATCH}/data/snapshot_2026-04-07.parquet"
+NIBI_SBATCH          = f"{NIBI_ALGO_DIR}/ml/ml/nibi/warm_refresh.sbatch"
+NIBI_BASE_SBATCH     = f"{NIBI_ALGO_DIR}/ml/ml/nibi/train_base.sbatch"
 
 # April 7 windows: 09:30–15:45 ET = 13:30–19:45 UTC, every 15 min (26 slots)
 _apr7_utc_start = dt.datetime(2026, 4, 7, 13, 30, 0, tzinfo=dt.timezone.utc)
@@ -191,6 +196,74 @@ def phase1_setup_nibi(skip: bool = False) -> None:
 
     # Create slice dir
     ssh(f"mkdir -p {NIBI_SLICE_DIR}")
+
+
+def phase2_scp_parquet() -> None:
+    log("\n══ Phase 2b: SCP parquet → NIBI ══")
+    local_size = FULL_PARQUET.stat().st_size
+    rc, remote_size, _ = ssh(f"stat -c%s {NIBI_FULL_PARQUET} 2>/dev/null || echo 0")
+    if rc == 0 and remote_size.strip().isdigit() and int(remote_size.strip()) == local_size:
+        log(f"  Remote matches local ({local_size/1e6:.1f}MB) — skipping")
+        _phase_timings.append({"phase": "scp_parquet", "sec": 0, "note": "skipped"})
+        return
+    t = Timer("scp full parquet")
+    ssh(f"mkdir -p {NIBI_SCRATCH}/data")
+    scp_to(str(FULL_PARQUET), NIBI_FULL_PARQUET, timeout=600)
+    _phase_timings.append({"phase": "scp_parquet", "sec": t.done(f"{local_size/1e6:.1f}MB")})
+
+
+def phase3_base_train(fast: bool = False) -> None:
+    log(f"\n══ Phase 3: Base Train on NIBI ({'FAST 200 trees' if fast else 'FULL 1157 trees'}) ══")
+
+    fast_flag = "--fast" if fast else ""
+    t_submit = Timer("sbatch train_base")
+    rc, out, err = ssh(
+        f"sbatch {NIBI_BASE_SBATCH} --parquet {NIBI_FULL_PARQUET} {fast_flag}"
+    )
+    if rc != 0:
+        raise RuntimeError(f"sbatch train_base failed: {err}")
+    job_id = next((tok for tok in out.split() if tok.isdigit()), None)
+    if not job_id:
+        raise RuntimeError(f"No job ID from: {out!r}")
+    t_submit.done(f"job_id={job_id}")
+
+    # Poll — base train takes longer, check every 60s
+    log(f"  Polling job {job_id} (this will take {'~20 min' if fast else '~2-3 hrs'})...")
+    max_poll = 30 * 60 if fast else 240 * 60
+    deadline = time.time() + max_poll
+    last_state = ""
+    t_poll = Timer("base train wall time")
+
+    while time.time() < deadline:
+        rc, state, _ = ssh(f"squeue -j {job_id} -h -o '%T' 2>/dev/null || echo GONE")
+        state = state.strip()
+        if state != last_state:
+            log(f"  [{state}] job {job_id} — elapsed {t_poll.elapsed():.0f}s")
+            last_state = state
+        if not state or state == "GONE":
+            rc2, sacct, _ = ssh(f"sacct -j {job_id} --noheader --format=State | head -1")
+            final = sacct.strip().split()[0] if sacct.strip() else "COMPLETED"
+            if final not in ("COMPLETED", "COMPLETING"):
+                raise RuntimeError(f"Base train job {job_id} ended: {final}")
+            break
+        if state in ("FAILED", "CANCELLED", "TIMEOUT", "NODE_FAIL"):
+            raise RuntimeError(f"Base train job {job_id} failed: {state}")
+        time.sleep(60)
+    else:
+        raise RuntimeError(f"Base train timeout after {max_poll//60} min")
+
+    wall_sec = t_poll.done(f"job {job_id} COMPLETED")
+
+    # Rsync base model back
+    t = Timer("rsync base model ← NIBI")
+    base_local = REPO_ROOT / "model_artifacts" / "base_2026-04-06_nibi"
+    rsync_from(f"{NIBI_RUN_ROOT}/current", base_local)
+    horizon_count = len(list((base_local / "models").glob("horizon_*.json")))
+    t.done(f"{horizon_count} horizons, wall={wall_sec:.0f}s")
+
+    _phase_timings.append({"phase": "base_train", "sec": wall_sec,
+                            "note": f"job={job_id} {'fast' if fast else 'full'}"})
+    log(f"  Base model saved locally: {base_local}")
 
 
 def phase2_extract_parquet() -> None:
@@ -410,12 +483,12 @@ def print_report() -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--dry-run",      action="store_true", help="Phase 0 only")
-    p.add_argument("--skip-setup",   action="store_true", help="Skip Phase 1")
-    p.add_argument("--skip-extract", action="store_true", help="Skip Phase 2 (parquet already local)")
-    p.add_argument("--start-window", type=int, default=0,
-                   help="Resume from window index (0-25)")
-    p.add_argument("--end-window",   type=int, default=25,
-                   help="Stop after this window index (default: 25)")
+    p.add_argument("--skip-setup",   action="store_true", help="Skip Phase 1 (repo already on NIBI)")
+    p.add_argument("--skip-extract", action="store_true", help="Skip extract (parquet already local)")
+    p.add_argument("--skip-base",    action="store_true", help="Skip Phase 3 base train (model already on NIBI)")
+    p.add_argument("--fast",         action="store_true", help="Base train: 200 trees (flow test)")
+    p.add_argument("--start-window", type=int, default=0,  help="Resume warm refresh at window index (0-25)")
+    p.add_argument("--end-window",   type=int, default=25, help="Stop after window index (default: 25)")
     return p.parse_args()
 
 
@@ -437,8 +510,14 @@ def main() -> None:
 
         if not args.skip_extract:
             phase2_extract_parquet()
+            phase2_scp_parquet()
         else:
             log("\n══ Phase 2: SKIPPED ══")
+
+        if not args.skip_base:
+            phase3_base_train(fast=args.fast)
+        else:
+            log("\n══ Phase 3: Base train SKIPPED ══")
 
         # Load full parquet once into memory for slicing
         log(f"\nLoading full parquet into memory ...")
