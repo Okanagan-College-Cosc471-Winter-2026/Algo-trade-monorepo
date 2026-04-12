@@ -1,0 +1,11 @@
+.env
+*.pyc
+__pycache__/
+.venv/
+*.egg-info/
+dist/
+build/
+logs/
+datasets/*.parquet
+datasets/*.csv
+model_artifacts/*/models/
