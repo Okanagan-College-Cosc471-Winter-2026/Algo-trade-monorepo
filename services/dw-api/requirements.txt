@@ -16,7 +16,7 @@ idna==3.11
 iniconfig==2.1.0
 packaging==26.0
 pluggy==1.6.0
-psycopg2-binary @ file:///home/cosc-admin/psycopg2_binary-2.9.9-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+psycopg2-binary>=2.9.9
 pydantic==2.12.5
 pydantic-core==2.41.5
 pydantic-settings==2.11.0
