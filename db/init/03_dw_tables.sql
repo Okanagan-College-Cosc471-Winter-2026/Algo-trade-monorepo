@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS staging.market_data_5m (
     asset_type     TEXT        NOT NULL,
     source         TEXT        NOT NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ingested_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (symbol, ts)
 );
 
