@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --gres=gpu:1
-#SBATCH --account=def-yourpi        # ← change to your NIBI allocation account
+#SBATCH --account=def-youry
 
 # ─────────────────────────────────────────────────────────────────
 # warm_refresh.sbatch
