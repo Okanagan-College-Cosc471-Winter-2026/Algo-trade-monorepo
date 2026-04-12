@@ -1,0 +1,14 @@
+[
+    "ticker_id",
+    "hour",
+    "dayofweek",
+    "ret_1",
+    "ret_5",
+    "ret_10",
+    "ret_20",
+    "dist_sma_10",
+    "dist_sma_50",
+    "volatility_20",
+    "rsi",
+    "vol_ratio"
+]

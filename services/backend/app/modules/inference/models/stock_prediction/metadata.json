@@ -1,0 +1,32 @@
+{
+    "model_type": "XGBoost",
+    "model_version": "1.0",
+    "training_date": "2026-02-11",
+    "prediction_horizon": 60,
+    "prediction_horizon_unit": "days",
+    "target": "future_return",
+    "n_features": 12,
+    "n_stocks": 5,
+    "stocks": [
+        "AAPL",
+        "AMZN",
+        "GOOGL",
+        "MSFT",
+        "TSLA"
+    ],
+    "train_samples": 1585,
+    "test_samples": 395,
+    "test_rmse": 0.096998,
+    "test_mae": 0.078487,
+    "hyperparameters": {
+        "n_estimators": 1000,
+        "learning_rate": 0.01,
+        "max_depth": 8,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "tree_method": "hist",
+        "objective": "reg:squarederror",
+        "early_stopping_rounds": 50
+    },
+    "notes": "Global model trained on 5 stocks with ~2 years of synthetic daily OHLC data"
+}

@@ -1,0 +1,32 @@
+{
+  "horizon_count": 26,
+  "target_definition": "log(next_regular_session_close_h / current_bar_close)",
+  "models": {
+    "target_h00": "horizon_00.json",
+    "target_h01": "horizon_01.json",
+    "target_h02": "horizon_02.json",
+    "target_h03": "horizon_03.json",
+    "target_h04": "horizon_04.json",
+    "target_h05": "horizon_05.json",
+    "target_h06": "horizon_06.json",
+    "target_h07": "horizon_07.json",
+    "target_h08": "horizon_08.json",
+    "target_h09": "horizon_09.json",
+    "target_h10": "horizon_10.json",
+    "target_h11": "horizon_11.json",
+    "target_h12": "horizon_12.json",
+    "target_h13": "horizon_13.json",
+    "target_h14": "horizon_14.json",
+    "target_h15": "horizon_15.json",
+    "target_h16": "horizon_16.json",
+    "target_h17": "horizon_17.json",
+    "target_h18": "horizon_18.json",
+    "target_h19": "horizon_19.json",
+    "target_h20": "horizon_20.json",
+    "target_h21": "horizon_21.json",
+    "target_h22": "horizon_22.json",
+    "target_h23": "horizon_23.json",
+    "target_h24": "horizon_24.json",
+    "target_h25": "horizon_25.json"
+  }
+}

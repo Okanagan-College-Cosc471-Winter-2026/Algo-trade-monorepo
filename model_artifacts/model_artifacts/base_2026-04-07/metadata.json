@@ -1,0 +1,26 @@
+{
+  "model_id": "base_20260407_xg3",
+  "model_type": "XGBoost_multi_horizon",
+  "bundle_role": "base",
+  "effective_as_of_date": "2026-04-06",
+  "training_date": "2026-04-10",
+  "target_definition": "log(next_regular_session_close_h / current_bar_close)",
+  "horizon_count": 26,
+  "n_features": 176,
+  "base_trees": 1157,
+  "hyperparameters": {
+    "objective": "reg:squarederror",
+    "tree_method": "hist",
+    "device": "cuda",
+    "learning_rate": 0.015,
+    "max_depth": 4,
+    "n_estimators": 1157
+  },
+  "date_range": {
+    "start_date": "2024-03-25",
+    "end_date": "2026-04-06"
+  },
+  "inference_symbols": 504,
+  "training_script": "XG_boost_3_multigpu_final.py",
+  "cluster": "Compute Canada / H100"
+}

@@ -1,0 +1,14 @@
+{
+  "step": 23,
+  "as_of_ts": "2026-04-07 19:15:00+00:00",
+  "slot_label": "15:15",
+  "warm_trees_added": 30,
+  "base_trees": 1157,
+  "total_trees_estimate": 1877,
+  "train_rows": 13104,
+  "inference_symbols": 504,
+  "train_sec": 5.676,
+  "inference_sec": 1.265,
+  "total_step_sec": 6.942,
+  "device": "cuda"
+}
