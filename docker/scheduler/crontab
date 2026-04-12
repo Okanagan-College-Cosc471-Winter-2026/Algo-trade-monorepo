@@ -1,4 +1,10 @@
-# Intraday collection: hourly Mon-Fri
-0 * * * 1-5 root /usr/local/bin/python /app/src/intraday_data_collection.py >> /app/logs/collect.log 2>&1
-# Nightly pipeline: 2am Mon-Fri
-0 2 * * 1-5 root /usr/local/bin/python /app/src/run_scheduled_operations.py >> /app/logs/pipeline.log 2>&1
+# Every 15 min during market hours Mon–Fri
+# 04:00–20:00 ET = 08:00–00:00 UTC (split across two cron lines for midnight boundary)
+*/15 8-23 * * 1-5 root /usr/local/bin/python /app/src/run_15min_pipeline.py >> /app/logs/pipeline_15m.log 2>&1
+*/15 0-1  * * 2-6 root /usr/local/bin/python /app/src/run_15min_pipeline.py >> /app/logs/pipeline_15m.log 2>&1
+
+# Nightly close operations: 20:05 ET = 00:05 UTC Tue–Sat
+5 0 * * 2-6 root /usr/local/bin/python /app/src/run_scheduled_operations.py >> /app/logs/pipeline.log 2>&1
+
+# NIBI warm refresh: 06:00 ET = 10:00 UTC Mon–Fri [DEFERRED — enable once SSH confirmed]
+# 0 10 * * 1-5 root /usr/local/bin/python /app/src/nibi_orchestrator.py >> /app/logs/nibi.log 2>&1
