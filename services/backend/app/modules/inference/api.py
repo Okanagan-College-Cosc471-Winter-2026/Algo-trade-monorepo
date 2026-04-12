@@ -10,6 +10,7 @@ The response shape depends on ACTIVE_MODEL:
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import SessionDep
+from app.modules.inference.model_loader import get_model_bundle
 from app.modules.inference.schemas import NextDayPredictionResponse
 from app.modules.inference.service import InferenceService
 
@@ -39,3 +40,20 @@ def predict_stock_price(symbol: str, session: SessionDep) -> NextDayPredictionRe
             raise HTTPException(status_code=400, detail=error_msg)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+
+
+@router.post("/admin/reload-model", tags=["admin"])
+def reload_model() -> dict:
+    """
+    Clear the in-process model cache and reload the bundle from disk.
+
+    Call this after promoting a new warm-refresh bundle via promote_model.sh.
+    The next request to /predict will load the updated model.
+    """
+    try:
+        get_model_bundle.cache_clear()
+        bundle = get_model_bundle()
+        model_version = bundle.metadata.get("model_id", "unknown") if hasattr(bundle, "metadata") else "unknown"
+        return {"status": "reloaded", "model_version": model_version}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model reload failed: {str(e)}")
