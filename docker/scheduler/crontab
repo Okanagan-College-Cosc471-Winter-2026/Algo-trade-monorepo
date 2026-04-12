@@ -1,0 +1,4 @@
+# Intraday collection: hourly Mon-Fri
+0 * * * 1-5 root /usr/local/bin/python /app/src/intraday_data_collection.py >> /app/logs/collect.log 2>&1
+# Nightly pipeline: 2am Mon-Fri
+0 2 * * 1-5 root /usr/local/bin/python /app/src/run_scheduled_operations.py >> /app/logs/pipeline.log 2>&1
