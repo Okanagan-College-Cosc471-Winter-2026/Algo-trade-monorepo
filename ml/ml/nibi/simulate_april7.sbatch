@@ -5,7 +5,7 @@
 #SBATCH --time=02:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:h100:1
 #SBATCH --account=def-youry
 
 # ─────────────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ echo "============================================="
 
 # ── 1. Load modules ───────────────────────────────────────────────
 echo "[1/4] Loading modules ..."
-module load gcc arrow python 2>/dev/null || true
+module load gcc arrow/17.0.0
 
 # ── 2. Activate venv ─────────────────────────────────────────────
 VENV_PATH="${HOME}/ENV"

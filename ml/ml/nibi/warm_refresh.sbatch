@@ -5,7 +5,7 @@
 #SBATCH --time=01:30:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:h100:1
 #SBATCH --account=def-youry
 
 # ─────────────────────────────────────────────────────────────────
@@ -53,8 +53,8 @@ echo "============================================="
 
 # ── 1. Load modules ───────────────────────────────────────────────
 echo "[1/4] Loading modules ..."
-module load gcc arrow python    # adjust module names for NIBI
-# module load cuda/12.2         # uncomment if GPU modules needed separately
+module load gcc arrow/17.0.0
+# GPU module loaded automatically via --gres=gpu:1 on NIBI
 
 # ── 2. Activate virtual environment ──────────────────────────────
 VENV_PATH="${HOME}/ENV"

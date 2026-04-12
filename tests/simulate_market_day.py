@@ -50,6 +50,7 @@ load_dotenv()
 REPO_ROOT    = Path(__file__).resolve().parents[1]
 NIBI_ALIAS   = "nibi"
 NIBI_USER    = os.getenv("NIBI_USER", "harshsaw")
+NIBI_HOST    = os.getenv("NIBI_HOST", "nibi.sharcnet.ca")
 NIBI_SCRATCH = os.getenv("NIBI_SCRATCH", "/scratch/harshsaw")
 
 OLD_DB_HOST  = os.getenv("OLD_DB_HOST", "localhost")
