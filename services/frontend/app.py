@@ -216,6 +216,15 @@ def build_sim_chart(
     sim_df    = live_ohlc if live_ohlc is not None else on_sim
     sim_dates = sim_df["date"].reset_index(drop=True)
 
+    # Derive market holidays: weekdays in the date range with no data bars
+    all_dates = pd.concat([hist_df["date"], sim_df["date"]]).dt.normalize().drop_duplicates()
+    if not all_dates.empty:
+        date_range = pd.date_range(all_dates.min(), all_dates.max(), freq="B")  # business days
+        trading_days = set(all_dates.dt.date)
+        holidays = [d.strftime("%Y-%m-%d") for d in date_range if d.date() not in trading_days]
+    else:
+        holidays = []
+
     fig = go.Figure()
 
     # Historical candlesticks (gray palette)
@@ -327,10 +336,10 @@ def build_sim_chart(
         showgrid=True,
         gridcolor="rgba(148,163,184,0.12)",
         rangeslider_visible=False,
-        # remove overnight and weekend gaps
         rangebreaks=[
             dict(bounds=[20, 13.5], pattern="hour"),  # 20:00–13:30 UTC = 16:00–09:30 ET
             dict(bounds=["sat", "mon"]),
+            *([dict(values=holidays)] if holidays else []),
         ],
     )
     fig.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)")
