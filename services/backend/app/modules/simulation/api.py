@@ -141,6 +141,21 @@ def get_simulation_history(symbol: str, session: SessionDep) -> list[dict]:
     ]
 
 
+@router.post("/admin/reload-simulation", tags=["admin"])
+def reload_simulation() -> dict:
+    """Re-load simulation artifacts from disk (picks up new current_simulation symlink)."""
+    from app.modules.simulation.loader import simulation_loader
+    try:
+        simulation_loader.reload()
+        return {
+            "status": "reloaded",
+            "replay_date": simulation_loader.replay_date,
+            "symbols": len(simulation_loader.available_symbols()),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Simulation reload failed: {e}")
+
+
 @router.get("/ohlc/{symbol}", response_model=list[dict])
 def get_simulation_ohlc(
     symbol: str, session: SessionDep

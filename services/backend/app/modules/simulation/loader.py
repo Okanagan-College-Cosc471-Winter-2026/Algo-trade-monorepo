@@ -129,6 +129,10 @@ class SimulationLoader:
             return df
         return df.sort_values("predicted_full_day_return", ascending=False).reset_index(drop=True)
 
+    def reload(self) -> None:
+        """Re-initialise from disk — picks up a newly promoted current_simulation symlink."""
+        self.__init__()
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------

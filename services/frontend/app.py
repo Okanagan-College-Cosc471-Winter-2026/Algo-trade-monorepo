@@ -174,22 +174,33 @@ def build_price_chart(df: pd.DataFrame, title: str, prediction: dict | None = No
                 font={"size": 11, "color": "#92400e"},
             )
 
+    # Pin tick labels to first bar of each trading day — clean "Apr 7" style labels
+    if not hist.empty:
+        day_groups = hist.groupby(hist["date"].dt.date)["axis_label"].first()
+        tickvals = day_groups.values.tolist()
+        ticktext = [pd.Timestamp(str(d)).strftime("%b %d") for d in day_groups.index]
+    else:
+        tickvals, ticktext = [], []
+
     latest_close = float(hist["close"].iloc[-1]) if not hist.empty else 0
     fig.update_layout(
         title=title, template="plotly_white",
         paper_bgcolor="white", plot_bgcolor="#fcfcfd",
         xaxis_title=None, yaxis_title="Price",
-        yaxis2={"title": "Volume", "overlaying": "y", "side": "right", "showgrid": False},
+        yaxis2={"title": "Volume", "overlaying": "y", "side": "right",
+                "showgrid": False, "showticklabels": False, "fixedrange": True},
         legend={"orientation": "h", "y": 1.02, "x": 1, "xanchor": "right"},
         margin={"l": 20, "r": 20, "t": 50, "b": 20},
         height=CHART_H, hovermode="x unified", dragmode="pan",
     )
     fig.update_xaxes(
-        showgrid=False,
-        rangeslider_visible=False,
         type="category",
-        nticks=20,
-        tickangle=-45,
+        tickmode="array",
+        tickvals=tickvals,
+        ticktext=ticktext,
+        showgrid=True,
+        gridcolor="rgba(148,163,184,0.12)",
+        rangeslider_visible=False,
     )
     fig.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)")
     if latest_close:
