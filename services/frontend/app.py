@@ -214,23 +214,22 @@ def build_sim_chart(
     on_sim  = hist_df[hist_df["trade_date"] == replay_date]
     live_ohlc = ohlc_df if (ohlc_df is not None and not ohlc_df.empty) else None
     sim_df    = live_ohlc if live_ohlc is not None else on_sim
-    sim_dates = sim_df["date"].reset_index(drop=True)
 
-    # Derive market holidays: weekdays in the date range with no data bars
-    all_dates = pd.concat([hist_df["date"], sim_df["date"]]).dt.normalize().drop_duplicates()
-    if not all_dates.empty:
-        date_range = pd.date_range(all_dates.min(), all_dates.max(), freq="B")  # business days
-        trading_days = set(all_dates.dt.date)
-        holidays = [d.strftime("%Y-%m-%d") for d in date_range if d.date() not in trading_days]
-    else:
-        holidays = []
+    # category x — equidistant per bar, inherently skips holidays/weekends/overnight
+    sim_axis  = sim_df["axis_label"].reset_index(drop=True)
+
+    # Tick at first bar of each trading day → show only the date label
+    all_df = pd.concat([pre_sim, sim_df], ignore_index=True).sort_values("date")
+    day_groups = all_df.groupby(all_df["date"].dt.date)["axis_label"].first()
+    tickvals = day_groups.values.tolist()
+    ticktext = [pd.Timestamp(str(d)).strftime("%b %d") for d in day_groups.index]
 
     fig = go.Figure()
 
     # Historical candlesticks (gray palette)
     if not pre_sim.empty:
         fig.add_trace(go.Candlestick(
-            x=pre_sim["date"],
+            x=pre_sim["axis_label"],
             open=pre_sim["open"], high=pre_sim["high"],
             low=pre_sim["low"], close=pre_sim["close"],
             name="Historical",
@@ -238,7 +237,7 @@ def build_sim_chart(
             increasing_fillcolor="#64748b",  decreasing_fillcolor="#64748b",
         ))
         fig.add_trace(go.Bar(
-            x=pre_sim["date"], y=pre_sim["volume"],
+            x=pre_sim["axis_label"], y=pre_sim["volume"],
             name="Vol (hist)", marker_color="#94a3b8",
             opacity=0.18, yaxis="y2",
         ))
@@ -250,7 +249,7 @@ def build_sim_chart(
             rest = sim_df.iloc[current_step + 1:]
             if not obs.empty:
                 fig.add_trace(go.Candlestick(
-                    x=obs["date"],
+                    x=obs["axis_label"],
                     open=obs["open"], high=obs["high"],
                     low=obs["low"], close=obs["close"],
                     name=f"Apr 7 observed (→ {step_label})",
@@ -259,7 +258,7 @@ def build_sim_chart(
                 ))
             if not rest.empty:
                 fig.add_trace(go.Candlestick(
-                    x=rest["date"],
+                    x=rest["axis_label"],
                     open=rest["open"], high=rest["high"],
                     low=rest["low"], close=rest["close"],
                     name="Apr 7 actual (not yet seen)",
@@ -269,7 +268,7 @@ def build_sim_chart(
                 ))
         else:
             fig.add_trace(go.Candlestick(
-                x=sim_df["date"],
+                x=sim_df["axis_label"],
                 open=sim_df["open"], high=sim_df["high"],
                 low=sim_df["low"], close=sim_df["close"],
                 name="Apr 7 actual",
@@ -277,7 +276,7 @@ def build_sim_chart(
                 increasing_fillcolor="#14b8a6",  decreasing_fillcolor="#ef4444",
             ))
         fig.add_trace(go.Bar(
-            x=sim_df["date"], y=sim_df["volume"],
+            x=sim_df["axis_label"], y=sim_df["volume"],
             name="Vol (Apr 7)", marker_color="#0ea5e9",
             opacity=0.25, yaxis="y2",
         ))
@@ -290,9 +289,9 @@ def build_sim_chart(
             if actual_at_step is not None:
                 base_log = bars[current_step]["pred_log_return"]
                 fwd_bars = bars[current_step:]
-                fwd_xs = [sim_dates.iloc[current_step + i]
+                fwd_xs = [sim_axis.iloc[current_step + i]
                           for i in range(len(fwd_bars))
-                          if current_step + i < len(sim_dates)]
+                          if current_step + i < len(sim_axis)]
                 fwd_ys = [
                     round(actual_at_step * math.exp(b["pred_log_return"] - base_log), 4)
                     for b in fwd_bars[:len(fwd_xs)]
@@ -305,7 +304,7 @@ def build_sim_chart(
                     marker={"size": 4, "color": "#f59e0b"},
                 ))
         elif anchor_close:
-            pred_xs = [sim_dates.iloc[i] for i in range(len(bars)) if i < len(sim_dates)]
+            pred_xs = [sim_axis.iloc[i] for i in range(len(bars)) if i < len(sim_axis)]
             pred_ys = [round(anchor_close * math.exp(b["pred_log_return"]), 4)
                        for b in bars[:len(pred_xs)]]
             fig.add_trace(go.Scatter(
@@ -329,18 +328,13 @@ def build_sim_chart(
         height=CHART_H, hovermode="x unified", dragmode="pan",
     )
     fig.update_xaxes(
-        type="date",
-        tickformat="%b %d",
-        ticklabelmode="period",
-        dtick="D1",
+        type="category",
+        tickmode="array",
+        tickvals=tickvals,
+        ticktext=ticktext,
         showgrid=True,
         gridcolor="rgba(148,163,184,0.12)",
         rangeslider_visible=False,
-        rangebreaks=[
-            dict(bounds=[20, 13.5], pattern="hour"),  # 20:00–13:30 UTC = 16:00–09:30 ET
-            dict(bounds=["sat", "mon"]),
-            *([dict(values=holidays)] if holidays else []),
-        ],
     )
     fig.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)")
     return fig
