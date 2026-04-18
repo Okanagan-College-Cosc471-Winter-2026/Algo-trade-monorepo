@@ -106,3 +106,42 @@ def sim_ohlc(symbol: str) -> list[dict[str, Any]]:
     return _request("GET", f"/simulation/ohlc/{symbol.upper()}")
 
 
+# ---------------------------------------------------------------------------
+# Ops / observability endpoints
+# ---------------------------------------------------------------------------
+
+def ops_status() -> dict[str, Any]:
+    """Full ops snapshot: services, machine, NIBI job, active model, data freshness."""
+    return _request("GET", "/ops/status")
+
+
+def ops_nibi_ssh() -> dict[str, Any]:
+    """Check if the SSH ControlMaster socket to NIBI is alive."""
+    return _request("GET", "/ops/nibi/ssh")
+
+
+def ops_nibi_exec(command: str) -> dict[str, Any]:
+    """Execute a whitelisted read-only command on NIBI."""
+    return _request("POST", "/ops/nibi/exec", json={"command": command})
+
+
+def ops_pipeline_logs(limit: int = 50) -> list[dict[str, Any]]:
+    """Last N rows from operation_logs.pipeline_logs."""
+    return _request("GET", "/ops/pipeline/logs", params={"limit": limit})
+
+
+def ops_data_freshness() -> dict[str, Any]:
+    """Latest window_ts and row count from ml.market_data_15m."""
+    return _request("GET", "/ops/data/freshness")
+
+
+def ops_nibi_relogin() -> dict[str, Any]:
+    """
+    Trigger auto_login.py on the backend to re-establish the SSH ControlMaster.
+    In Duo push mode: returns immediately, user must approve push on phone.
+    In TOTP mode: fully headless, socket active within ~10s.
+    Poll ops_nibi_ssh() to know when socket comes alive.
+    """
+    return _request("POST", "/ops/nibi/relogin")
+
+

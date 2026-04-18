@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 from datetime import UTC, datetime
 
 import pandas as pd
@@ -15,6 +16,12 @@ from api import (
     health_check,
     list_snapshots,
     list_stocks,
+    ops_data_freshness,
+    ops_nibi_exec,
+    ops_nibi_relogin,
+    ops_nibi_ssh,
+    ops_pipeline_logs,
+    ops_status,
     predict,
     sim_base,
     sim_history,
@@ -33,8 +40,10 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Tighten top padding */
-    .block-container {padding-top: 1rem; padding-bottom: 0.5rem;}
+    /* Hide Streamlit's top header bar entirely */
+    [data-testid="stHeader"] { display: none !important; }
+    /* Reclaim the space that header occupied */
+    .block-container {padding-top: 0.75rem; padding-bottom: 0.5rem;}
     /* Sidebar branding block */
     [data-testid="stSidebar"] .sidebar-brand {
         padding: 0.4rem 0 0.9rem 0;
@@ -54,6 +63,7 @@ st.markdown(
 
 CHART_H = 580   # chart height in px
 TABLE_H = 400
+NIBI_SIM_DIR = os.getenv("NIBI_SIM_DIR", "/home/harshsaw/projects/def-youry/test_simulation")
 
 
 # ── Caches ────────────────────────────────────────────────────────────────────
@@ -199,59 +209,81 @@ def build_sim_chart(
     replay_date: str = "2026-04-07",
     ohlc_df: pd.DataFrame | None = None,
 ) -> go.Figure:
-    """Simulation chart: 5-day history + Apr-7 actual + prediction path."""
+    """Simulation chart: 5-day history candlesticks + volume + prediction path."""
     pre_sim = hist_df[hist_df["trade_date"] < replay_date]
     on_sim  = hist_df[hist_df["trade_date"] == replay_date]
     live_ohlc = ohlc_df if (ohlc_df is not None and not ohlc_df.empty) else None
     sim_df    = live_ohlc if live_ohlc is not None else on_sim
-    sim_axis = sim_df["axis_label"].reset_index(drop=True)
-    sim_close = sim_df["close"].reset_index(drop=True)
+    sim_dates = sim_df["date"].reset_index(drop=True)
 
     fig = go.Figure()
 
-    # Trace 1: Historical close (gray)
+    # Historical candlesticks (gray palette)
     if not pre_sim.empty:
-        fig.add_trace(go.Scatter(
-            x=pre_sim["axis_label"], y=pre_sim["close"],
-            mode="lines", name="Historical Close (DB)",
-            line={"color": "#64748b", "width": 2},
+        fig.add_trace(go.Candlestick(
+            x=pre_sim["date"],
+            open=pre_sim["open"], high=pre_sim["high"],
+            low=pre_sim["low"], close=pre_sim["close"],
+            name="Historical",
+            increasing_line_color="#475569", decreasing_line_color="#475569",
+            increasing_fillcolor="#64748b",  decreasing_fillcolor="#64748b",
+        ))
+        fig.add_trace(go.Bar(
+            x=pre_sim["date"], y=pre_sim["volume"],
+            name="Vol (hist)", marker_color="#94a3b8",
+            opacity=0.18, yaxis="y2",
         ))
 
-    # Trace 2 & 3: Apr-7 actual bars
+    # Sim-day candlesticks
     if not sim_df.empty:
         if is_warm:
             obs  = sim_df.iloc[:current_step + 1]
             rest = sim_df.iloc[current_step + 1:]
-            fig.add_trace(go.Scatter(
-                x=obs["axis_label"], y=obs["close"],
-                mode="lines", name=f"Apr 7 observed (→ {step_label})",
-                line={"color": "#0ea5e9", "width": 2},
-            ))
+            if not obs.empty:
+                fig.add_trace(go.Candlestick(
+                    x=obs["date"],
+                    open=obs["open"], high=obs["high"],
+                    low=obs["low"], close=obs["close"],
+                    name=f"Apr 7 observed (→ {step_label})",
+                    increasing_line_color="#0f766e", decreasing_line_color="#b91c1c",
+                    increasing_fillcolor="#14b8a6",  decreasing_fillcolor="#ef4444",
+                ))
             if not rest.empty:
-                fig.add_trace(go.Scatter(
-                    x=rest["axis_label"], y=rest["close"],
-                    mode="lines", name="Apr 7 actual (not yet seen)",
-                    line={"color": "#38bdf8", "width": 2, "dash": "dashdot"},
-                    opacity=0.6,
+                fig.add_trace(go.Candlestick(
+                    x=rest["date"],
+                    open=rest["open"], high=rest["high"],
+                    low=rest["low"], close=rest["close"],
+                    name="Apr 7 actual (not yet seen)",
+                    increasing_line_color="#7dd3fc", decreasing_line_color="#7dd3fc",
+                    increasing_fillcolor="#bae6fd",  decreasing_fillcolor="#bae6fd",
+                    opacity=0.55,
                 ))
         else:
-            fig.add_trace(go.Scatter(
-                x=sim_df["axis_label"], y=sim_df["close"],
-                mode="lines", name="Apr 7 actual (DB)",
-                line={"color": "#0ea5e9", "width": 2},
+            fig.add_trace(go.Candlestick(
+                x=sim_df["date"],
+                open=sim_df["open"], high=sim_df["high"],
+                low=sim_df["low"], close=sim_df["close"],
+                name="Apr 7 actual",
+                increasing_line_color="#0f766e", decreasing_line_color="#b91c1c",
+                increasing_fillcolor="#14b8a6",  decreasing_fillcolor="#ef4444",
             ))
+        fig.add_trace(go.Bar(
+            x=sim_df["date"], y=sim_df["volume"],
+            name="Vol (Apr 7)", marker_color="#0ea5e9",
+            opacity=0.25, yaxis="y2",
+        ))
 
-    # Trace 4: Prediction path (amber dotted)
+    # Prediction path (amber dotted)
     bars = pred_active.get("bars", [])
     if bars and not sim_df.empty:
         if is_warm:
-            actual_at_step = float(sim_close.iloc[current_step]) if current_step < len(sim_close) else None
+            actual_at_step = float(sim_df["close"].iloc[current_step]) if current_step < len(sim_df) else None
             if actual_at_step is not None:
                 base_log = bars[current_step]["pred_log_return"]
                 fwd_bars = bars[current_step:]
-                fwd_xs = [sim_axis.iloc[current_step + i]
+                fwd_xs = [sim_dates.iloc[current_step + i]
                           for i in range(len(fwd_bars))
-                          if current_step + i < len(sim_axis)]
+                          if current_step + i < len(sim_dates)]
                 fwd_ys = [
                     round(actual_at_step * math.exp(b["pred_log_return"] - base_log), 4)
                     for b in fwd_bars[:len(fwd_xs)]
@@ -264,7 +296,7 @@ def build_sim_chart(
                     marker={"size": 4, "color": "#f59e0b"},
                 ))
         elif anchor_close:
-            pred_xs = [sim_axis.iloc[i] for i in range(len(bars)) if i < len(sim_axis)]
+            pred_xs = [sim_dates.iloc[i] for i in range(len(bars)) if i < len(sim_dates)]
             pred_ys = [round(anchor_close * math.exp(b["pred_log_return"]), 4)
                        for b in bars[:len(pred_xs)]]
             fig.add_trace(go.Scatter(
@@ -278,16 +310,28 @@ def build_sim_chart(
     fig.update_layout(
         template="plotly_white", paper_bgcolor="white", plot_bgcolor="#fcfcfd",
         xaxis_title=None, yaxis_title="Price (USD)",
+        yaxis2={
+            "overlaying": "y", "side": "right",
+            "showgrid": False, "showticklabels": False,
+            "fixedrange": True,
+        },
         legend={"orientation": "h", "y": 1.02, "x": 1, "xanchor": "right"},
         margin={"l": 20, "r": 20, "t": 40, "b": 20},
         height=CHART_H, hovermode="x unified", dragmode="pan",
     )
     fig.update_xaxes(
-        showgrid=False,
+        type="date",
+        tickformat="%b %d",
+        ticklabelmode="period",
+        dtick="D1",
+        showgrid=True,
+        gridcolor="rgba(148,163,184,0.12)",
         rangeslider_visible=False,
-        type="category",
-        nticks=20,
-        tickangle=-45,
+        # remove overnight and weekend gaps
+        rangebreaks=[
+            dict(bounds=[20, 13.5], pattern="hour"),  # 20:00–13:30 UTC = 16:00–09:30 ET
+            dict(bounds=["sat", "mon"]),
+        ],
     )
     fig.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)")
     return fig
@@ -514,7 +558,27 @@ def render_predictions(stocks: list[dict], symbol: str) -> None:
 
 def render_simulation(stocks: list[dict], symbol: str) -> None:
     if not symbol:
-        st.info("Simulation prediction CSVs are not available on this server. The model artifacts were generated on a remote HPC cluster and the prediction files were not committed to the repository.")
+        st.markdown(
+            """
+            <div style="
+                display:flex; flex-direction:column; align-items:center;
+                justify-content:center; padding:4rem 2rem; text-align:center;
+                color:#64748b;
+            ">
+                <div style="font-size:2.5rem; margin-bottom:0.75rem;">📂</div>
+                <div style="font-size:1.1rem; font-weight:600; margin-bottom:0.4rem; color:#334155;">
+                    Simulation data not available
+                </div>
+                <div style="font-size:0.9rem; max-width:480px; line-height:1.6;">
+                    Prediction CSVs were generated on the remote HPC cluster (NIBI/Compute Canada)
+                    and are not committed to this repository.
+                    Run <code>promote_model.sh</code> or sync the
+                    <code>model_artifacts/simulation_*</code> directory to enable this view.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         return
 
     try:
@@ -623,6 +687,426 @@ def render_snapshots() -> None:
                            file_name=selected, mime="application/octet-stream")
 
 
+# ── Ops page ──────────────────────────────────────────────────────────────────
+
+def _status_badge(ok: bool, label_ok: str, label_bad: str) -> str:
+    col = "#16a34a" if ok else "#dc2626"
+    label = label_ok if ok else label_bad
+    return (
+        f'<span style="background:{col};color:white;padding:2px 10px;'
+        f'border-radius:12px;font-size:0.78rem;font-weight:600">{label}</span>'
+    )
+
+
+def render_ops() -> None:
+    st.subheader("System Operations")
+
+    # ── Fetch snapshot ─────────────────────────────────────────────
+    with st.spinner("Loading ops status…"):
+        try:
+            snap = ops_status()
+        except ApiError as exc:
+            st.error(f"Could not reach backend: {exc}")
+            return
+
+    gen_at = snap.get("generated_at", "")
+    st.caption(f"Snapshot at {gen_at[:19].replace('T',' ')} UTC — refresh page to update")
+
+    # ══ 1. Service Health ══════════════════════════════════════════
+    st.markdown("#### Service Health")
+    c1, c2, c3, c4 = st.columns(4)
+
+    # Backend (we got here so it's up)
+    c1.markdown("**Backend API**")
+    c1.markdown(_status_badge(True, "Online", "Offline"), unsafe_allow_html=True)
+
+    # SSH socket → NIBI
+    ssh = snap.get("ssh_socket", {})
+    c2.markdown("**NIBI SSH Socket**")
+    c2.markdown(_status_badge(ssh.get("alive", False), "Socket alive", "Socket dead"), unsafe_allow_html=True)
+    if not ssh.get("alive"):
+        c2.caption("Run `morning_login.sh`")
+
+    # Collector
+    col = snap.get("collector", {})
+    collector_ok = col.get("last_status") == "success" and (col.get("age_min") or 9999) < 30
+    c3.markdown("**Collector Pipeline**")
+    c3.markdown(_status_badge(collector_ok, "Running", "Stale / Error"), unsafe_allow_html=True)
+    if col.get("age_min") is not None:
+        c3.caption(f"Last run: {col['age_min']:.0f} min ago — {col.get('last_stage','?')} [{col.get('last_status','?')}]")
+    elif col.get("error"):
+        c3.caption(f"DB error: {col['error']}")
+
+    # Data freshness
+    data = snap.get("data", {})
+    stale = data.get("staleness_min")
+    data_ok = stale is not None and stale < 20
+    c4.markdown("**Market Data**")
+    c4.markdown(_status_badge(data_ok, "Fresh", "Stale"), unsafe_allow_html=True)
+    if stale is not None:
+        c4.caption(f"Last bar: {stale:.0f} min ago  |  {data.get('total_rows',0):,} rows")
+
+    st.divider()
+
+    # ══ 2. NIBI Job Status ═════════════════════════════════════════
+    st.markdown("#### NIBI Training Job")
+    job = snap.get("nibi_job", {})
+    model = snap.get("model", {})
+    live_state = job.get("live_state") or job.get("status", "unknown")
+
+    state_colors = {
+        "RUNNING": "#16a34a", "COMPLETED": "#0284c7", "completed": "#0284c7",
+        "PENDING": "#d97706", "submitted": "#d97706",
+        "FAILED": "#dc2626", "CANCELLED": "#dc2626", "TIMEOUT": "#dc2626",
+    }
+    state_col = state_colors.get(live_state, "#64748b")
+
+    j1, j2, j3, j4 = st.columns(4)
+    j1.metric("Job ID", job.get("job_id") or "—")
+    j2.metric("Sim Date", job.get("sim_date") or "—")
+    j3.markdown(f"**Status**")
+    j3.markdown(
+        f'<span style="background:{state_col};color:white;padding:3px 12px;'
+        f'border-radius:12px;font-weight:700">{live_state.upper()}</span>',
+        unsafe_allow_html=True,
+    )
+    submitted_at = job.get("submitted_at", "")
+    j4.metric("Submitted", submitted_at[11:19] + " UTC" if len(submitted_at) > 18 else submitted_at or "—")
+
+    # Window progress bar
+    w_ok    = model.get("windows_ok", 0)
+    w_total = model.get("windows_total", 26)
+    w_err   = model.get("windows_error", 0)
+    prog_val = w_ok / w_total if w_total else 0
+    st.markdown(f"**Warm-refresh windows:** {w_ok} / {w_total} completed"
+                + (f"  ({w_err} errors)" if w_err else ""))
+    st.progress(prog_val)
+
+    # Per-window detail (collapsible)
+    steps = model.get("windows_steps", [])
+    if steps:
+        with st.expander("Window breakdown", expanded=False):
+            rows = []
+            for s in steps:
+                rows.append({
+                    "Step": s.get("step"),
+                    "Time (ET)": s.get("et_label", ""),
+                    "Status": s.get("status", ""),
+                    "Train (s)": s.get("train_sec"),
+                    "Total (s)": s.get("total_sec"),
+                })
+            df_steps = pd.DataFrame(rows)
+            st.dataframe(df_steps, use_container_width=True, hide_index=True,
+                column_config={
+                    "Step":      st.column_config.NumberColumn(width="small"),
+                    "Time (ET)": st.column_config.TextColumn(width="small"),
+                    "Status":    st.column_config.TextColumn(width="medium"),
+                    "Train (s)": st.column_config.NumberColumn(format="%.1f", width="small"),
+                    "Total (s)": st.column_config.NumberColumn(format="%.1f", width="small"),
+                })
+
+    st.divider()
+
+    # ══ 3. Active Model ═══════════════════════════════════════════
+    st.markdown("#### Active Model")
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Bundle", model.get("name") or "—")
+    m2.metric("Train Cutoff", model.get("train_end_date") or "—")
+    m3.metric("Base Trees", f"{model.get('n_estimators', '?'):,}" if model.get("n_estimators") else "—")
+    promoted = model.get("promoted_at", "")
+    m4.metric("Promoted", promoted[11:16] + " UTC" if len(promoted) > 15 else promoted or "—")
+    if not model.get("active"):
+        st.warning("No active model symlink found at model_artifacts/current_base")
+
+    st.divider()
+
+    # ══ 4. VPS Machine Health ═════════════════════════════════════
+    st.markdown("#### VPS Machine Health")
+    machine = snap.get("machine", {})
+
+    # ── Top summary row ───────────────────────────────────────────
+    h1, h2, h3, h4, h5 = st.columns(5)
+    h1.metric("Host", machine.get("hostname", "—"))
+    h2.metric("Uptime", f"{machine.get('uptime_hrs', 0):.0f} hrs")
+    load = machine.get("load_avg", {})
+    h3.metric("Load avg", f"{load.get('1m', 0):.2f} / {load.get('5m', 0):.2f} / {load.get('15m', 0):.2f}",
+              help="1m / 5m / 15m load average")
+    h4.metric("Processes", machine.get("process_count", "—"))
+    h5.metric("OS", machine.get("os", "—"))
+
+    st.markdown("")
+
+    # ── CPU ───────────────────────────────────────────────────────
+    cpu_pct = machine.get("cpu_pct", 0)
+    cpu_cores = machine.get("cpu_cores", 1)
+    cpu_col = "#16a34a" if cpu_pct < 70 else "#d97706" if cpu_pct < 90 else "#dc2626"
+    st.markdown(f"**CPU** — {cpu_pct:.1f}%  <span style='color:#64748b;font-size:0.8rem'>"
+                f"{machine.get('cpu_model','')} · {cpu_cores} logical cores</span>",
+                unsafe_allow_html=True)
+    st.progress(cpu_pct / 100)
+
+    # Per-core breakdown (collapsed)
+    per_core = machine.get("cpu_per_core", [])
+    if per_core:
+        with st.expander(f"Per-core breakdown ({len(per_core)} cores)", expanded=False):
+            cols = st.columns(min(len(per_core), 8))
+            for i, pct in enumerate(per_core):
+                c = cols[i % len(cols)]
+                c.caption(f"Core {i}")
+                c.progress(pct / 100)
+                c.caption(f"{pct:.0f}%")
+
+    st.markdown("")
+
+    # ── Memory ───────────────────────────────────────────────────
+    ram_pct   = machine.get("ram_pct", 0)
+    ram_used  = machine.get("ram_used_gb", 0)
+    ram_total = machine.get("ram_total_gb", 1)
+    swap_pct  = machine.get("swap_pct", 0)
+    swap_used = machine.get("swap_used_gb", 0)
+    swap_tot  = machine.get("swap_total_gb", 0)
+
+    mc1, mc2 = st.columns(2)
+    with mc1:
+        st.markdown(f"**RAM** — {ram_pct:.0f}%  "
+                    f"<span style='color:#64748b;font-size:0.8rem'>{ram_used:.1f} / {ram_total:.1f} GB</span>",
+                    unsafe_allow_html=True)
+        st.progress(ram_pct / 100)
+    with mc2:
+        st.markdown(f"**Swap** — {swap_pct:.0f}%  "
+                    f"<span style='color:#64748b;font-size:0.8rem'>{swap_used:.1f} / {swap_tot:.1f} GB</span>",
+                    unsafe_allow_html=True)
+        st.progress(swap_pct / 100)
+
+    st.markdown("")
+
+    # ── Disk ─────────────────────────────────────────────────────
+    disk = machine.get("disk", {})
+    disk_cols = st.columns(len(disk) or 1)
+    for i, (mount, d) in enumerate(disk.items()):
+        dpct = d.get("pct", 0)
+        with disk_cols[i]:
+            warn = " ⚠️" if dpct > 85 else ""
+            st.markdown(f"**Disk `{mount}`** — {dpct:.0f}%{warn}  "
+                        f"<span style='color:#64748b;font-size:0.8rem'>"
+                        f"{d.get('used_gb',0):.0f} / {d.get('total_gb',0):.0f} GB</span>",
+                        unsafe_allow_html=True)
+            st.progress(dpct / 100)
+
+    st.markdown("")
+
+    # ── Network ──────────────────────────────────────────────────
+    n1, n2, n3 = st.columns(3)
+    n1.metric("Net Sent",    f"{machine.get('net_sent_gb', 0):.2f} GB",
+              help="Cumulative since boot")
+    n2.metric("Net Received", f"{machine.get('net_recv_gb', 0):.2f} GB",
+              help="Cumulative since boot")
+    n3.metric("Packets (tx/rx)",
+              f"{machine.get('net_pkts_sent',0):,} / {machine.get('net_pkts_recv',0):,}")
+
+    # ── NIBI GPU (live, only when job RUNNING) ────────────────────
+    nibi_gpu = snap.get("nibi_gpu")
+    if nibi_gpu:
+        st.markdown("")
+        st.markdown("**NIBI GPU (live)**")
+        g1, g2, g3, g4 = st.columns(4)
+        g1.metric("GPU", nibi_gpu.get("name", "H100"))
+        mem_used  = nibi_gpu.get("mem_used", 0)
+        mem_total = nibi_gpu.get("mem_total", 1)
+        g2.metric("VRAM", f"{mem_used:,} / {mem_total:,} MB")
+        g3.metric("Utilisation", f"{nibi_gpu.get('util_pct', 0)}%")
+        g4.metric("Temp", f"{nibi_gpu.get('temp_c', 0)} °C")
+        vram_pct = mem_used / mem_total if mem_total else 0
+        st.progress(vram_pct, text=f"VRAM {vram_pct*100:.0f}%")
+    else:
+        st.caption("No GPU on this VPS — training runs on NIBI H100  |  "
+                   "NIBI GPU metrics appear here when a job is RUNNING")
+
+    st.divider()
+
+    # ══ 4b. NIBI Jobs ═════════════════════════════════════════════
+    st.markdown("#### NIBI Jobs")
+    nibi_jobs = snap.get("nibi_jobs", {})
+
+    if not nibi_jobs.get("available"):
+        st.warning("SSH socket offline — NIBI job data unavailable. Reconnect via SSH section below.")
+    else:
+        # Active / queued jobs
+        queued = nibi_jobs.get("queued", [])
+        if queued:
+            st.markdown(f"**Active / Queued** ({len(queued)} job{'s' if len(queued) != 1 else ''})")
+            state_colors = {
+                "RUNNING": "#16a34a", "PENDING": "#d97706",
+                "FAILED": "#dc2626", "COMPLETED": "#0284c7", "CANCELLED": "#64748b",
+            }
+            for j in queued:
+                s = j.get("state", "")
+                col = state_colors.get(s, "#64748b")
+                badge = (f'<span style="background:{col};color:white;padding:1px 8px;'
+                         f'border-radius:10px;font-size:0.75rem;font-weight:600">{s}</span>')
+                st.markdown(
+                    f"**{j.get('job_id')}** &nbsp; {j.get('name')} &nbsp; {badge} &nbsp; "
+                    f"elapsed `{j.get('elapsed')}` / limit `{j.get('time_lim')}` &nbsp; "
+                    f"start: `{j.get('start','—')}`",
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.info("No active or pending jobs in queue.")
+
+        st.markdown("")
+
+        # Recent job history
+        history = nibi_jobs.get("history", [])
+        if history:
+            st.markdown("**Recent Job History** (last 7 days)")
+            df_hist = pd.DataFrame(history)
+            state_map = {
+                "COMPLETED": "✅ COMPLETED", "FAILED": "❌ FAILED",
+                "CANCELLED": "⛔ CANCELLED", "RUNNING": "🟢 RUNNING",
+                "PENDING": "🟡 PENDING", "TIMEOUT": "⏱ TIMEOUT",
+                "OUT_OF_MEMORY": "💥 OOM",
+            }
+            df_hist["state"] = df_hist["state"].map(lambda s: state_map.get(s, s))
+            st.dataframe(df_hist, use_container_width=True, hide_index=True,
+                column_config={
+                    "job_id":  st.column_config.TextColumn("Job ID",  width="small"),
+                    "name":    st.column_config.TextColumn("Name",    width="medium"),
+                    "state":   st.column_config.TextColumn("State",   width="medium"),
+                    "exit":    st.column_config.TextColumn("Exit",    width="small"),
+                    "elapsed": st.column_config.TextColumn("Elapsed", width="small"),
+                    "start":   st.column_config.TextColumn("Started", width="medium"),
+                })
+
+        # Scratch quota
+        quota = nibi_jobs.get("quota_raw")
+        if quota:
+            with st.expander("NIBI scratch quota", expanded=False):
+                st.code(quota, language=None)
+
+    st.divider()
+
+    # ══ 5. Pipeline Run History ═══════════════════════════════════
+    st.markdown("#### Collector Pipeline History")
+    try:
+        logs = ops_pipeline_logs(limit=30)
+    except ApiError:
+        logs = []
+
+    if logs:
+        df_logs = pd.DataFrame(logs)
+        df_logs["ts"] = pd.to_datetime(df_logs["ts"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+        status_map = {"success": "✅", "failed": "❌", "warning": "⚠️"}
+        df_logs["status"] = df_logs["status"].map(lambda s: f"{status_map.get(s, '')} {s}")
+        st.dataframe(df_logs, use_container_width=True, hide_index=True, height=280,
+            column_config={
+                "ts":      st.column_config.TextColumn("Time (UTC)", width="medium"),
+                "stage":   st.column_config.TextColumn("Stage", width="medium"),
+                "status":  st.column_config.TextColumn("Status", width="small"),
+                "message": st.column_config.TextColumn("Detail", width="large"),
+            })
+    else:
+        st.info("No pipeline logs available.")
+
+    st.divider()
+
+    # ══ 6. NIBI SSH Terminal ═══════════════════════════════════════
+    st.markdown("#### NIBI Remote Commands")
+    st.caption(
+        "Runs over the existing SSH ControlMaster socket (no MFA needed while socket is alive). "
+        "Read-only commands only: `squeue`, `sacct`, `tail`, `ls`, `nvidia-smi`, `quota`, etc."
+    )
+
+    preset_commands = {
+        "My jobs in queue":           f"squeue -u {snap.get('nibi_job', {}).get('sim_date', 'harshsaw')} -o '%.10i %.9P %.20j %.8u %.8T %.10M %.6D %R' 2>/dev/null || squeue -u harshsaw",
+        "Job accounting (last job)":  f"sacct -j {job.get('job_id', '0')} --format=JobID,State,Elapsed,Start,End,AllocCPUS --noheader 2>/dev/null",
+        "NIBI GPU nodes":             "sinfo -p gpu --noheader -o '%n %t %C' 2>/dev/null | head -10",
+        "Simulation log (tail 30)":   f"tail -30 {NIBI_SIM_DIR}/logs/sim_full_day_{job.get('job_id','0')}.out 2>/dev/null || echo 'log not found'",
+        "Disk quota":                 "quota -s 2>/dev/null || df -h $HOME",
+        "Custom…":                    "",
+    }
+
+    preset = st.selectbox("Quick commands", list(preset_commands.keys()), key="nibi_preset")
+    default_cmd = preset_commands[preset]
+    cmd_input = st.text_input("Command", value=default_cmd, key="nibi_cmd",
+                              placeholder="squeue -u harshsaw")
+
+    if st.button("Run on NIBI", type="primary", disabled=not ssh.get("alive")):
+        if not ssh.get("alive"):
+            st.error("SSH socket is dead — run morning_login.sh first.")
+        elif cmd_input.strip():
+            with st.spinner("Running…"):
+                try:
+                    result = ops_nibi_exec(cmd_input.strip())
+                    rc = result.get("rc", -1)
+                    stdout = result.get("stdout", "")
+                    stderr = result.get("stderr", "")
+                    if rc == 0:
+                        st.success(f"Exit code: {rc}")
+                    else:
+                        st.warning(f"Exit code: {rc}")
+                    if stdout:
+                        st.code(stdout, language=None)
+                    if stderr:
+                        st.caption(f"stderr: {stderr}")
+                except ApiError as exc:
+                    st.error(str(exc))
+
+    if not ssh.get("alive"):
+        st.warning(
+            "SSH socket is not active. Choose a re-auth method below:"
+        )
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Option A — Auto Re-login**")
+            st.caption(
+                "Triggers `auto_login.py` on the backend.  \n"
+                "- If `NIBI_TOTP_SECRET` is set in `.env` → **fully headless**, no phone needed.  \n"
+                "- Otherwise → Duo push sent, approve on your phone, then click Refresh."
+            )
+            if st.button("Re-login via Backend", type="primary"):
+                try:
+                    resp = ops_nibi_relogin()
+                    if resp.get("already_alive"):
+                        st.success("Socket already active — refresh the page.")
+                    else:
+                        mode = resp.get("mode", "?")
+                        if mode == "totp":
+                            st.success("TOTP login started. Refreshing in 5s…")
+                            import time; time.sleep(5)
+                            st.rerun()
+                        else:
+                            st.info(
+                                "Duo push sent. Approve on your phone, "
+                                "then click **Refresh SSH Status** below."
+                            )
+                except ApiError as exc:
+                    st.error(str(exc))
+
+            if st.button("Refresh SSH Status"):
+                try:
+                    fresh = ops_nibi_ssh()
+                    if fresh.get("alive"):
+                        st.success("Socket is now alive! Reload the Ops page.")
+                    else:
+                        st.warning("Still not alive — push not approved yet?")
+                except ApiError as exc:
+                    st.error(str(exc))
+
+        with col_b:
+            st.markdown("**Option B — Web Terminal**")
+            st.caption(
+                "Open a browser terminal, run `morning_login.sh`, approve Duo push manually.  \n"
+                "Use this if Option A fails (e.g. pexpect not installed in container)."
+            )
+            st.markdown(
+                "[Open Web Terminal (port 7681)](http://localhost:7681)  \n"
+                "Then run:  \n"
+                "```bash\n"
+                "bash ml/ml/nibi/morning_login.sh\n"
+                "```"
+            )
+
+
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 
 def build_sidebar(stocks: list[dict]) -> tuple[str, str, int, str]:
@@ -643,7 +1127,7 @@ def build_sidebar(stocks: list[dict]) -> tuple[str, str, int, str]:
         )
 
         page = st.radio(
-            "Navigation", ["Overview","Stocks","Predictions","Simulation","Snapshots"],
+            "Navigation", ["Overview","Stocks","Predictions","Simulation","Snapshots","Ops"],
             label_visibility="collapsed",
         )
         st.divider()
@@ -733,6 +1217,8 @@ def main() -> None:
         render_predictions(stocks, symbol)
     elif page == "Simulation":
         render_simulation(stocks, symbol)
+    elif page == "Ops":
+        render_ops()
     else:
         render_snapshots()
 
