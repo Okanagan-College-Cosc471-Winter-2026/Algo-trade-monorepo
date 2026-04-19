@@ -1,0 +1,34 @@
+Contributors
+This project was developed through a collaborative effort across three specialized teams:
+📊 Data Collection Team
+Responsible for sourcing, aggregating, and preprocessing raw financial and market data.
+Andrew Johnson
+Emilio Iturbide
+Reilly Mager
+Lian Heckrodt
+Cade Dempsey
+Kristina Cormier
+https://github.com/KristinaCormier/2026COSC471DataCollection 
+
+🏗️ Data Warehouse Team
+Designed and implemented the data storage architecture, ETL/ELT pipelines, and database systems.
+Alex Anthony
+Hayden Nikkel
+Daemon Lewis
+John Cortez
+Jackson Rosco
+https://github.com/Okanagan-College-Cosc471-Winter-2026/the-project-data-warehouse-team.git 
+
+🤖 Machine Learning Team (XGBoost)
+Developed, trained, and evaluated machine learning models for predictive analytics and trading strategies.
+Harsh Saw
+Zane Tessmer
+Kavaljeet Singh
+Dante Bertolutti
+Guntash Brar
+Parag Jindal
+https://github.com/Okanagan-College-Cosc471-Winter-2026/the-project-maverick 
+
+🤝 Acknowledgements
+We thank all contributors and collaborators who supported the development, testing, and deployment of this system.
+
