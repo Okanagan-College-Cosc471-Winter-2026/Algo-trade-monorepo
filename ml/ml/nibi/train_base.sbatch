@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=algo_base_train
-#SBATCH --output=/scratch/%u/ml/logs/base_train_%j.out
-#SBATCH --error=/scratch/%u/ml/logs/base_train_%j.err
+#SBATCH --output=/home/%u/projects/def-youry/test_simulation/logs/base_train_%j.out
+#SBATCH --error=/home/%u/projects/def-youry/test_simulation/logs/base_train_%j.err
 #SBATCH --time=03:30:00
 # NOTE: use --fast flag for 200-tree flow test (~20 min actual GPU time)
 #       remove --fast for full 1157-tree production run (~2-3 hrs GPU time)
@@ -40,10 +40,10 @@ if [[ -z "${PARQUET_FILE}" ]]; then
     echo "ERROR: --parquet <path> required"; exit 1
 fi
 
-SCRATCH="${SCRATCH:-/scratch/${USER}}"
-RUN_ROOT="${SCRATCH}/ml/run_root"
-LOG_DIR="${SCRATCH}/ml/logs"
-REPO="${SCRATCH}/algo"
+SIM_DIR="/home/${USER}/projects/def-youry/test_simulation"
+RUN_ROOT="${SIM_DIR}/run_root"
+LOG_DIR="${SIM_DIR}/logs"
+REPO="${SIM_DIR}"
 
 mkdir -p "${RUN_ROOT}" "${LOG_DIR}"
 

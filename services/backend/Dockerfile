@@ -4,7 +4,7 @@ ENV PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY services/backend/pyproject.toml services/backend/uv.lock* ./
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-install-project --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-install-project --no-dev
 COPY services/backend/app /app/app
 COPY services/backend/scripts /app/scripts
 COPY services/backend/alembic.ini /app/alembic.ini

@@ -1,0 +1,8 @@
+{
+  "mode": "refresh",
+  "status": "promoted",
+  "promoted_at": "2026-04-16T21:14:09Z",
+  "model_id": "warm_refresh_20260406_20260416T211359Z",
+  "bundle_role": "current",
+  "source_candidate": "warm_refresh_20260406_20260416T211359Z"
+}

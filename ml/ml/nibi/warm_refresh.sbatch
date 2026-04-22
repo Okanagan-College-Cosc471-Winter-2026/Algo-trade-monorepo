@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=algo_warm_refresh
-#SBATCH --output=/scratch/%u/ml/logs/warm_refresh_%j.out
-#SBATCH --error=/scratch/%u/ml/logs/warm_refresh_%j.err
+#SBATCH --output=/home/%u/projects/def-youry/test_simulation/logs/warm_refresh_%j.out
+#SBATCH --error=/home/%u/projects/def-youry/test_simulation/logs/warm_refresh_%j.err
 #SBATCH --time=01:30:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
@@ -13,9 +13,9 @@
 # Submitted manually (or by nibi_orchestrator.py once SSH is confirmed).
 #
 # Usage:
-#   sbatch warm_refresh.sbatch --parquet /scratch/$USER/data/snapshot_YYYY-MM-DD.parquet
+#   sbatch warm_refresh.sbatch --parquet /home/$USER/projects/def-youry/test_simulation/data/snapshot_YYYY-MM-DD.parquet
 #
-# Output bundle written to: /scratch/$USER/ml/warm_refresh/latest/
+# Output bundle written to: /home/$USER/projects/def-youry/test_simulation/run_root/current/
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -35,10 +35,10 @@ if [[ -z "${PARQUET_FILE}" ]]; then
 fi
 
 RUN_DATE=$(date +%F)
-SCRATCH="${SCRATCH:-/scratch/${USER}}"
-WARM_ROOT="${SCRATCH}/ml/warm_refresh"
-OUT_DIR="${WARM_ROOT}/latest"
-LOG_DIR="${SCRATCH}/ml/logs"
+SIM_DIR="/home/${USER}/projects/def-youry/test_simulation"
+WARM_ROOT="${SIM_DIR}/run_root"
+OUT_DIR="${WARM_ROOT}/current"
+LOG_DIR="${SIM_DIR}/logs"
 
 mkdir -p "${WARM_ROOT}" "${OUT_DIR}" "${LOG_DIR}"
 

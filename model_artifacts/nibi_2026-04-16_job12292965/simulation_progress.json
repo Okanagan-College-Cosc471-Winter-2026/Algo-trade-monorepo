@@ -1,0 +1,217 @@
+{
+  "sim_date": "2026-04-15",
+  "status": "success",
+  "base_train_sec": 2227.3,
+  "steps": [
+    {
+      "step": 0,
+      "as_of_ts": "2026-04-15T13:30:00+00:00",
+      "et_label": "09:30",
+      "status": "ok",
+      "train_sec": 453.7,
+      "total_sec": 459.5
+    },
+    {
+      "step": 1,
+      "as_of_ts": "2026-04-15T13:45:00+00:00",
+      "et_label": "09:45",
+      "status": "ok",
+      "train_sec": 450.1,
+      "total_sec": 456.3
+    },
+    {
+      "step": 2,
+      "as_of_ts": "2026-04-15T14:00:00+00:00",
+      "et_label": "10:00",
+      "status": "ok",
+      "train_sec": 466.1,
+      "total_sec": 474.5
+    },
+    {
+      "step": 3,
+      "as_of_ts": "2026-04-15T14:15:00+00:00",
+      "et_label": "10:15",
+      "status": "ok",
+      "train_sec": 455.4,
+      "total_sec": 463.4
+    },
+    {
+      "step": 4,
+      "as_of_ts": "2026-04-15T14:30:00+00:00",
+      "et_label": "10:30",
+      "status": "ok",
+      "train_sec": 457.4,
+      "total_sec": 464.8
+    },
+    {
+      "step": 5,
+      "as_of_ts": "2026-04-15T14:45:00+00:00",
+      "et_label": "10:45",
+      "status": "ok",
+      "train_sec": 455.8,
+      "total_sec": 463.9
+    },
+    {
+      "step": 6,
+      "as_of_ts": "2026-04-15T15:00:00+00:00",
+      "et_label": "11:00",
+      "status": "ok",
+      "train_sec": 446.4,
+      "total_sec": 453.8
+    },
+    {
+      "step": 7,
+      "as_of_ts": "2026-04-15T15:15:00+00:00",
+      "et_label": "11:15",
+      "status": "ok",
+      "train_sec": 447.3,
+      "total_sec": 453.6
+    },
+    {
+      "step": 8,
+      "as_of_ts": "2026-04-15T15:30:00+00:00",
+      "et_label": "11:30",
+      "status": "ok",
+      "train_sec": 445.8,
+      "total_sec": 451.9
+    },
+    {
+      "step": 9,
+      "as_of_ts": "2026-04-15T15:45:00+00:00",
+      "et_label": "11:45",
+      "status": "ok",
+      "train_sec": 449.9,
+      "total_sec": 456.4
+    },
+    {
+      "step": 10,
+      "as_of_ts": "2026-04-15T16:00:00+00:00",
+      "et_label": "12:00",
+      "status": "ok",
+      "train_sec": 447.8,
+      "total_sec": 454.1
+    },
+    {
+      "step": 11,
+      "as_of_ts": "2026-04-15T16:15:00+00:00",
+      "et_label": "12:15",
+      "status": "ok",
+      "train_sec": 448.5,
+      "total_sec": 454.8
+    },
+    {
+      "step": 12,
+      "as_of_ts": "2026-04-15T16:30:00+00:00",
+      "et_label": "12:30",
+      "status": "ok",
+      "train_sec": 450.8,
+      "total_sec": 457.8
+    },
+    {
+      "step": 13,
+      "as_of_ts": "2026-04-15T16:45:00+00:00",
+      "et_label": "12:45",
+      "status": "ok",
+      "train_sec": 449.4,
+      "total_sec": 455.8
+    },
+    {
+      "step": 14,
+      "as_of_ts": "2026-04-15T17:00:00+00:00",
+      "et_label": "13:00",
+      "status": "ok",
+      "train_sec": 441.3,
+      "total_sec": 448.0
+    },
+    {
+      "step": 15,
+      "as_of_ts": "2026-04-15T17:15:00+00:00",
+      "et_label": "13:15",
+      "status": "ok",
+      "train_sec": 435.9,
+      "total_sec": 442.1
+    },
+    {
+      "step": 16,
+      "as_of_ts": "2026-04-15T17:30:00+00:00",
+      "et_label": "13:30",
+      "status": "ok",
+      "train_sec": 438.6,
+      "total_sec": 445.3
+    },
+    {
+      "step": 17,
+      "as_of_ts": "2026-04-15T17:45:00+00:00",
+      "et_label": "13:45",
+      "status": "ok",
+      "train_sec": 436.4,
+      "total_sec": 444.5
+    },
+    {
+      "step": 18,
+      "as_of_ts": "2026-04-15T18:00:00+00:00",
+      "et_label": "14:00",
+      "status": "ok",
+      "train_sec": 438.2,
+      "total_sec": 445.0
+    },
+    {
+      "step": 19,
+      "as_of_ts": "2026-04-15T18:15:00+00:00",
+      "et_label": "14:15",
+      "status": "ok",
+      "train_sec": 438.8,
+      "total_sec": 445.0
+    },
+    {
+      "step": 20,
+      "as_of_ts": "2026-04-15T18:30:00+00:00",
+      "et_label": "14:30",
+      "status": "ok",
+      "train_sec": 438.4,
+      "total_sec": 444.8
+    },
+    {
+      "step": 21,
+      "as_of_ts": "2026-04-15T18:45:00+00:00",
+      "et_label": "14:45",
+      "status": "ok",
+      "train_sec": 437.2,
+      "total_sec": 443.7
+    },
+    {
+      "step": 22,
+      "as_of_ts": "2026-04-15T19:00:00+00:00",
+      "et_label": "15:00",
+      "status": "ok",
+      "train_sec": 440.3,
+      "total_sec": 447.8
+    },
+    {
+      "step": 23,
+      "as_of_ts": "2026-04-15T19:15:00+00:00",
+      "et_label": "15:15",
+      "status": "ok",
+      "train_sec": 440.2,
+      "total_sec": 447.2
+    },
+    {
+      "step": 24,
+      "as_of_ts": "2026-04-15T19:30:00+00:00",
+      "et_label": "15:30",
+      "status": "ok",
+      "train_sec": 437.0,
+      "total_sec": 444.1
+    },
+    {
+      "step": 25,
+      "as_of_ts": "2026-04-15T19:45:00+00:00",
+      "et_label": "15:45",
+      "status": "ok",
+      "train_sec": 438.6,
+      "total_sec": 445.7
+    }
+  ],
+  "started_at": "2026-04-16T17:21:08.147657",
+  "finished_at": "2026-04-16T21:14:20.408418"
+}

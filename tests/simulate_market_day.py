@@ -2,33 +2,25 @@
 """
 simulate_market_day.py — Full pipeline simulation: base train → April 7 intraday warm-refresh.
 
-Flow
-────
+Flow (single 8-hour GPU job — queue wait happens ONCE):
   Phase 0  NIBI health check (SSH + sbatch)
-  Phase 1  Setup NIBI (rsync repo to scratch)
-  Phase 2  Extract parquet from old DB (2024-03-25 → 2026-04-07)
-  Phase 3  SCP parquet to NIBI
-  Phase 4  BASE TRAIN on NIBI (data up to April 6 cutoff)
-             sbatch train_base.sbatch --parquet ... [--fast]
-             Polls until COMPLETED, rsyncs base model back
-  Phase 5  For each of the 26 April 7 bars (09:30–15:45 ET):
-             A  Slice parquet up to this bar's close time
-             B  SCP slice to NIBI
-             C  sbatch warm_refresh.sbatch (+30 trees on previous model)
-             D  Poll squeue until COMPLETED
-             E  rsync updated model back → local step_XX/
-             F  Log timing for this window
-  Phase 6  Print full timing report (per-window table + totals)
+  Phase 1  Setup NIBI  — rsync ml code + base model to test_simulation/
+  Phase 2  Extract parquet from DB → local datasets/
+           SCP parquet → NIBI test_simulation/data/
+  Phase 3  Submit simulate_full_day.sbatch (8h H100)
+           Poll ONE job until COMPLETED
+  Phase 4  Rsync run_root/ back → local model_artifacts/sim_2026-04-07/
+  Phase 5  Print timing report from simulation_progress.json
 
 Usage (from repo root, after: bash ml/ml/nibi/morning_login.sh):
-    python tests/simulate_market_day.py              # full run (base + 26 windows)
-    python tests/simulate_market_day.py --fast       # 200-tree base (flow test, ~20 min)
+    python tests/simulate_market_day.py              # full run
+    python tests/simulate_market_day.py --fast       # 200-tree base (flow test)
     python tests/simulate_market_day.py --dry-run    # Phase 0 only
-    python tests/simulate_market_day.py --skip-setup --skip-base  # resume: warm refresh only
-    python tests/simulate_market_day.py --start-window 5          # resume warm refresh at window 5
+    python tests/simulate_market_day.py --skip-setup --skip-extract --skip-base
+    python tests/simulate_market_day.py --start-window 5
 
-Env vars:
-    NIBI_USER, NIBI_SCRATCH  (from .env)
+Env vars (from .env):
+    NIBI_USER, NIBI_HOST, NIBI_SIM_DIR
     OLD_DB_HOST, OLD_DB_PORT, OLD_DB_NAME, OLD_DB_USER, OLD_DB_PASSWORD
 """
 from __future__ import annotations
@@ -37,13 +29,10 @@ import argparse
 import datetime as dt
 import json
 import os
-import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
-
-import pandas as pd
 
 from dotenv import load_dotenv
 
@@ -54,7 +43,7 @@ REPO_ROOT    = Path(__file__).resolve().parents[1]
 NIBI_ALIAS   = "nibi"
 NIBI_USER    = os.getenv("NIBI_USER", "harshsaw")
 NIBI_HOST    = os.getenv("NIBI_HOST", "nibi.sharcnet.ca")
-NIBI_SCRATCH = os.getenv("NIBI_SCRATCH", "/scratch/harshsaw")
+NIBI_SIM_DIR = os.getenv("NIBI_SIM_DIR", "/home/harshsaw/projects/def-youry/test_simulation")
 
 OLD_DB_HOST  = os.getenv("OLD_DB_HOST", "localhost")
 OLD_DB_PORT  = int(os.getenv("OLD_DB_PORT", "5432"))
@@ -63,26 +52,18 @@ OLD_DB_USER  = os.getenv("OLD_DB_USER", "mluser")
 OLD_DB_PASS  = os.getenv("OLD_DB_PASSWORD", "mlpassword")
 
 # Local paths
-LOCAL_DATASETS   = REPO_ROOT / "datasets"
-FULL_PARQUET     = LOCAL_DATASETS / "snapshot_2026-04-07.parquet"
-SLICE_DIR        = LOCAL_DATASETS / "slices"
-LOCAL_MODEL_DIR  = REPO_ROOT / "model_artifacts" / "sim_2026-04-07"
-CURRENT_LINK     = REPO_ROOT / "model_artifacts" / "current_base"
+LOCAL_DATASETS    = REPO_ROOT / "datasets"
+FULL_PARQUET      = LOCAL_DATASETS / "snapshot_2026-04-07.parquet"
+LOCAL_MODEL_DIR   = REPO_ROOT / "model_artifacts" / "sim_2026-04-07"
 
-# NIBI paths
-NIBI_ALGO_DIR        = f"{NIBI_SCRATCH}/algo"
-NIBI_RUN_ROOT        = f"{NIBI_SCRATCH}/ml/run_root"
-NIBI_SLICE_DIR       = f"{NIBI_SCRATCH}/data/slices"
-NIBI_FULL_PARQUET    = f"{NIBI_SCRATCH}/data/snapshot_2026-04-07.parquet"
-NIBI_SBATCH          = f"{NIBI_ALGO_DIR}/ml/ml/nibi/warm_refresh.sbatch"
-NIBI_BASE_SBATCH     = f"{NIBI_ALGO_DIR}/ml/ml/nibi/train_base.sbatch"
+# NIBI paths (all under test_simulation/)
+NIBI_DATA_DIR     = f"{NIBI_SIM_DIR}/data"
+NIBI_FULL_PARQUET = f"{NIBI_SIM_DIR}/data/snapshot_2026-04-07.parquet"
+NIBI_RUN_ROOT     = f"{NIBI_SIM_DIR}/run_root"
+NIBI_FULL_SBATCH  = f"{NIBI_SIM_DIR}/ml/ml/nibi/simulate_full_day.sbatch"
 
-# April 7 windows: 09:30–15:45 ET = 13:30–19:45 UTC, every 15 min (26 slots)
-_apr7_utc_start = dt.datetime(2026, 4, 7, 13, 30, 0, tzinfo=dt.timezone.utc)
-WINDOWS = [_apr7_utc_start + dt.timedelta(minutes=15 * i) for i in range(26)]
-
-POLL_INTERVAL   = 30    # seconds between squeue checks
-MAX_POLL_MIN    = 60    # abort if job not done in 60 min
+POLL_INTERVAL   = 60    # seconds between squeue checks
+MAX_POLL_HOURS  = 8     # abort if job not done in 8h
 
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -98,9 +79,6 @@ def log(msg: str) -> None:
 
 
 # ── Timing ────────────────────────────────────────────────────────────────────
-_window_timings: list[dict] = []
-_phase_timings:  list[dict] = []
-
 class Timer:
     def __init__(self, label: str):
         self.label = label
@@ -133,7 +111,7 @@ def scp_to(local: str, remote: str, timeout: int = 300) -> None:
         raise RuntimeError(f"SCP failed: {r.stderr.strip()}")
 
 
-def rsync_from(remote: str, local: Path, timeout: int = 300) -> None:
+def rsync_from(remote: str, local: Path, timeout: int = 600) -> None:
     local.mkdir(parents=True, exist_ok=True)
     r = subprocess.run(
         ["rsync", "-az", "-e", "ssh -o BatchMode=yes",
@@ -162,7 +140,8 @@ def phase0_health_check() -> None:
     rc, out, err = ssh("echo pong && sbatch --version | head -1")
     if rc != 0:
         raise RuntimeError(f"SSH failed: {err}\nRun: bash ml/ml/nibi/morning_login.sh")
-    _phase_timings.append({"phase": "health_check", "sec": t.done()})
+    log(f"  {out}")
+    t.done()
 
 
 def phase1_setup_nibi(skip: bool = False) -> None:
@@ -172,12 +151,15 @@ def phase1_setup_nibi(skip: bool = False) -> None:
         log("  [skip] --skip-setup set")
         return
 
-    # Rsync ml code
-    t = Timer("rsync ml code → NIBI")
-    rsync_to(REPO_ROOT / "ml" / "ml", f"{NIBI_ALGO_DIR}/ml/ml")
-    _phase_timings.append({"phase": "rsync_code", "sec": t.done()})
+    # Ensure test_simulation dir structure exists
+    ssh(f"mkdir -p {NIBI_SIM_DIR}/data {NIBI_SIM_DIR}/logs {NIBI_SIM_DIR}/run_root {NIBI_SIM_DIR}/ml/ml")
 
-    # Rsync base model (trained up to April 6) as run_root/current/
+    # Rsync ml code → test_simulation/ml/ml/
+    t = Timer("rsync ml code → NIBI")
+    rsync_to(REPO_ROOT / "ml" / "ml", f"{NIBI_SIM_DIR}/ml/ml")
+    t.done()
+
+    # Rsync base model → test_simulation/run_root/current/
     base_src = Path("/data/projects/the-project-maverick/model_artifacts/base_2026-04-07")
     if not base_src.exists():
         raise RuntimeError(f"Base model not found: {base_src}")
@@ -185,98 +167,23 @@ def phase1_setup_nibi(skip: bool = False) -> None:
     t = Timer("rsync base model → NIBI run_root/current/")
     ssh(f"mkdir -p {NIBI_RUN_ROOT}/current/models")
     rsync_to(base_src / "models", f"{NIBI_RUN_ROOT}/current/models")
-    scp_to(str(base_src / "metadata.json"), f"{NIBI_RUN_ROOT}/current/metadata.json")
+    scp_to(str(base_src / "metadata.json"),      f"{NIBI_RUN_ROOT}/current/metadata.json")
     scp_to(str(base_src / "feature_names.json"), f"{NIBI_RUN_ROOT}/current/feature_names.json")
-    sec = t.done("1157 trees, cutoff=2026-04-06")
-    _phase_timings.append({"phase": "rsync_base_model", "sec": sec})
-
-    # Verify
     rc, count, _ = ssh(f"ls {NIBI_RUN_ROOT}/current/models/*.json | wc -l")
-    log(f"  Model files on NIBI: {count}")
-
-    # Create slice dir
-    ssh(f"mkdir -p {NIBI_SLICE_DIR}")
-
-
-def phase2_scp_parquet() -> None:
-    log("\n══ Phase 2b: SCP parquet → NIBI ══")
-    local_size = FULL_PARQUET.stat().st_size
-    rc, remote_size, _ = ssh(f"stat -c%s {NIBI_FULL_PARQUET} 2>/dev/null || echo 0")
-    if rc == 0 and remote_size.strip().isdigit() and int(remote_size.strip()) == local_size:
-        log(f"  Remote matches local ({local_size/1e6:.1f}MB) — skipping")
-        _phase_timings.append({"phase": "scp_parquet", "sec": 0, "note": "skipped"})
-        return
-    t = Timer("scp full parquet")
-    ssh(f"mkdir -p {NIBI_SCRATCH}/data")
-    scp_to(str(FULL_PARQUET), NIBI_FULL_PARQUET, timeout=600)
-    _phase_timings.append({"phase": "scp_parquet", "sec": t.done(f"{local_size/1e6:.1f}MB")})
-
-
-def phase3_base_train(fast: bool = False) -> None:
-    log(f"\n══ Phase 3: Base Train on NIBI ({'FAST 200 trees' if fast else 'FULL 1157 trees'}) ══")
-
-    fast_flag = "--fast" if fast else ""
-    t_submit = Timer("sbatch train_base")
-    rc, out, err = ssh(
-        f"sbatch {NIBI_BASE_SBATCH} --parquet {NIBI_FULL_PARQUET} {fast_flag}"
-    )
-    if rc != 0:
-        raise RuntimeError(f"sbatch train_base failed: {err}")
-    job_id = next((tok for tok in out.split() if tok.isdigit()), None)
-    if not job_id:
-        raise RuntimeError(f"No job ID from: {out!r}")
-    t_submit.done(f"job_id={job_id}")
-
-    # Poll — base train takes longer, check every 60s
-    log(f"  Polling job {job_id} (this will take {'~20 min' if fast else '~2-3 hrs'})...")
-    max_poll = 30 * 60 if fast else 240 * 60
-    deadline = time.time() + max_poll
-    last_state = ""
-    t_poll = Timer("base train wall time")
-
-    while time.time() < deadline:
-        rc, state, _ = ssh(f"squeue -j {job_id} -h -o '%T' 2>/dev/null || echo GONE")
-        state = state.strip()
-        if state != last_state:
-            log(f"  [{state}] job {job_id} — elapsed {t_poll.elapsed():.0f}s")
-            last_state = state
-        if not state or state == "GONE":
-            rc2, sacct, _ = ssh(f"sacct -j {job_id} --noheader --format=State | head -1")
-            final = sacct.strip().split()[0] if sacct.strip() else "COMPLETED"
-            if final not in ("COMPLETED", "COMPLETING"):
-                raise RuntimeError(f"Base train job {job_id} ended: {final}")
-            break
-        if state in ("FAILED", "CANCELLED", "TIMEOUT", "NODE_FAIL"):
-            raise RuntimeError(f"Base train job {job_id} failed: {state}")
-        time.sleep(60)
-    else:
-        raise RuntimeError(f"Base train timeout after {max_poll//60} min")
-
-    wall_sec = t_poll.done(f"job {job_id} COMPLETED")
-
-    # Rsync base model back
-    t = Timer("rsync base model ← NIBI")
-    base_local = REPO_ROOT / "model_artifacts" / "base_2026-04-06_nibi"
-    rsync_from(f"{NIBI_RUN_ROOT}/current", base_local)
-    horizon_count = len(list((base_local / "models").glob("horizon_*.json")))
-    t.done(f"{horizon_count} horizons, wall={wall_sec:.0f}s")
-
-    _phase_timings.append({"phase": "base_train", "sec": wall_sec,
-                            "note": f"job={job_id} {'fast' if fast else 'full'}"})
-    log(f"  Base model saved locally: {base_local}")
+    t.done(f"1157 trees, cutoff=2026-04-06 — {count} files on NIBI")
 
 
 def phase2_extract_parquet() -> None:
-    log("\n══ Phase 2: Extract parquet from DB ══")
+    log("\n══ Phase 2a: Extract parquet from DB ══")
     LOCAL_DATASETS.mkdir(parents=True, exist_ok=True)
 
     if FULL_PARQUET.exists():
         mb = FULL_PARQUET.stat().st_size / 1e6
         log(f"  Parquet already exists ({mb:.1f} MB) — reusing")
-        _phase_timings.append({"phase": "extract_parquet", "sec": 0, "note": "reused"})
         return
 
     t = Timer("extract ml.market_data_15m → parquet")
+    import pandas as pd
     from sqlalchemy import create_engine, text
     import pyarrow as pa, pyarrow.parquet as pq
 
@@ -285,197 +192,152 @@ def phase2_extract_parquet() -> None:
         f"{OLD_DB_HOST}:{OLD_DB_PORT}/{OLD_DB_NAME}"
     )
     log(f"  Querying {OLD_DB_NAME} on {OLD_DB_HOST}:{OLD_DB_PORT} ...")
+    CHUNK = 200_000
+    chunks = []
     with engine.connect() as conn:
-        df = pd.read_sql(text(
-            "SELECT * FROM ml.market_data_15m ORDER BY symbol, window_ts"
-        ), conn)
+        total_rows = conn.execute(text("SELECT COUNT(*) FROM ml.market_data_15m")).scalar()
+        log(f"  Total rows: {total_rows:,}")
+        for chunk_df in pd.read_sql(
+            text("SELECT * FROM ml.market_data_15m ORDER BY symbol, window_ts"),
+            conn, chunksize=CHUNK,
+        ):
+            chunks.append(chunk_df)
+            log(f"  Loaded {sum(len(c) for c in chunks):,}/{total_rows:,} ...")
     engine.dispose()
 
+    df = pd.concat(chunks, ignore_index=True)
     pq.write_table(pa.Table.from_pandas(df), FULL_PARQUET)
     mb = FULL_PARQUET.stat().st_size / 1e6
-    sec = t.done(f"{len(df):,} rows, {df['symbol'].nunique()} symbols, {mb:.1f}MB")
-    _phase_timings.append({"phase": "extract_parquet", "sec": sec})
+    t.done(f"{len(df):,} rows, {df['symbol'].nunique()} symbols, {mb:.1f}MB")
 
 
-def make_slice(window_ts: dt.datetime, df_full: pd.DataFrame) -> Path:
-    """Slice: all data up to and including this window's bar."""
-    SLICE_DIR.mkdir(parents=True, exist_ok=True)
-    label = window_ts.strftime("%H%M")
-    path  = SLICE_DIR / f"slice_apr7_{label}.parquet"
-
-    # Include all history up to April 6 PLUS April 7 bars up to this window
-    cutoff = window_ts
-    mask   = df_full["window_ts"] <= cutoff
-    sliced = df_full[mask].copy()
-
-    import pyarrow as pa, pyarrow.parquet as pq
-    pq.write_table(pa.Table.from_pandas(sliced), path)
-    return path
+def phase2b_scp_parquet() -> None:
+    log("\n══ Phase 2b: SCP parquet → NIBI ══")
+    local_size = FULL_PARQUET.stat().st_size
+    rc, remote_size, _ = ssh(f"stat -c%s {NIBI_FULL_PARQUET} 2>/dev/null || echo 0")
+    if rc == 0 and remote_size.strip().isdigit() and int(remote_size.strip()) == local_size:
+        log(f"  Remote matches local ({local_size/1e6:.1f}MB) — skipping")
+        return
+    t = Timer("scp full parquet → NIBI")
+    ssh(f"mkdir -p {NIBI_DATA_DIR}")
+    scp_to(str(FULL_PARQUET), NIBI_FULL_PARQUET, timeout=600)
+    t.done(f"{local_size/1e6:.1f}MB")
 
 
-def run_window(idx: int, window_ts: dt.datetime, df_full: pd.DataFrame) -> dict:
-    """Execute one 15-min warm-refresh cycle. Returns timing dict."""
-    et_time = (window_ts - dt.timedelta(hours=4)).strftime("%H:%M")   # approx ET
-    label   = window_ts.strftime("%H%M")
-    log(f"\n── Window {idx:02d}/25 — {et_time} ET ({window_ts.strftime('%H:%M')} UTC) ──")
+def phase3_submit_and_poll(fast: bool, skip_base: bool, start_window: int) -> str:
+    """Submit one 8-hour job, poll until done. Returns job_id."""
+    log("\n══ Phase 3: Submit Full-Day Simulation Job (8h GPU) ══")
 
-    timing = {
-        "window": idx,
-        "window_ts": window_ts.isoformat(),
-        "et_time": et_time,
-        "scp_sec": 0.0, "queue_sec": 0.0,
-        "train_sec": 0.0, "rsync_sec": 0.0,
-        "total_sec": 0.0, "job_id": "",
-        "status": "ok",
-    }
-    wall_t0 = time.time()
+    fast_flag       = "--fast"         if fast       else ""
+    skip_base_flag  = "--skip-base"    if skip_base  else ""
+    window_flag     = f"--start-window {start_window}" if start_window > 0 else ""
+    extra = " ".join(f for f in [fast_flag, skip_base_flag, window_flag] if f)
 
-    try:
-        # A — Slice parquet
-        t = Timer(f"  slice")
-        slice_path = make_slice(window_ts, df_full)
-        slice_mb   = slice_path.stat().st_size / 1e6
-        t.done(f"{slice_mb:.1f}MB, rows={len(pd.read_parquet(slice_path)):,}")
+    cmd = (
+        f"sbatch {NIBI_FULL_SBATCH} "
+        f"--parquet {NIBI_FULL_PARQUET} "
+        f"--sim-date 2026-04-07 "
+        f"{extra}"
+    ).strip()
+    log(f"  {cmd}")
 
-        # B — SCP slice
-        t = Timer(f"  scp")
-        remote_slice = f"{NIBI_SLICE_DIR}/slice_apr7_{label}.parquet"
-        scp_to(str(slice_path), remote_slice, timeout=120)
-        timing["scp_sec"] = t.done(f"{slice_mb:.1f}MB → NIBI")
+    t_submit = Timer("sbatch submit")
+    rc, out, err = ssh(cmd, timeout=30)
+    if rc != 0:
+        raise RuntimeError(f"sbatch failed: {err}")
+    job_id = next((tok for tok in out.split() if tok.isdigit()), None)
+    if not job_id:
+        raise RuntimeError(f"No job ID in: {out!r}")
+    t_submit.done(f"job_id={job_id}")
 
-        # C — Submit job
-        t = Timer(f"  sbatch")
-        rc, out, err = ssh(f"sbatch {NIBI_SBATCH} --parquet {remote_slice}")
-        if rc != 0:
-            raise RuntimeError(f"sbatch failed: {err}")
-        job_id = next((tok for tok in out.split() if tok.isdigit()), None)
-        if not job_id:
-            raise RuntimeError(f"No job ID in: {out!r}")
-        timing["job_id"] = job_id
-        t.done(f"job_id={job_id}")
+    log(f"  Polling job {job_id} every {POLL_INTERVAL}s (max {MAX_POLL_HOURS}h) ...")
+    deadline = time.time() + MAX_POLL_HOURS * 3600
+    last_state = ""
+    t_poll = Timer("job wall time")
 
-        # D — Poll
-        t_queue = Timer(f"  queue_wait")
-        t_train_start = None
-        deadline = time.time() + MAX_POLL_MIN * 60
-        last_state = ""
+    while time.time() < deadline:
+        rc, state, _ = ssh(f"squeue -j {job_id} -h -o '%T' 2>/dev/null || echo GONE")
+        state = state.strip()
 
-        while time.time() < deadline:
-            rc, state_out, _ = ssh(f"squeue -j {job_id} -h -o '%T' 2>/dev/null || echo GONE")
-            state = state_out.strip()
+        if state != last_state:
+            elapsed_min = t_poll.elapsed() / 60
+            log(f"  [{state}] job {job_id} — {elapsed_min:.0f}min elapsed")
+            last_state = state
 
-            if state in ("RUNNING", "COMPLETING") and t_train_start is None:
-                timing["queue_sec"] = t_queue.elapsed()
-                log(f"  [RUNNING] job {job_id} — queue wait: {timing['queue_sec']:.0f}s")
-                t_train_start = time.time()
+        if not state or state == "GONE":
+            rc2, sacct, _ = ssh(f"sacct -j {job_id} --noheader --format=State | head -1")
+            final = sacct.strip().split()[0] if sacct.strip() else "COMPLETED"
+            if final not in ("COMPLETED", "COMPLETING"):
+                raise RuntimeError(f"Job {job_id} ended with state: {final}")
+            break
 
-            if not state or state == "GONE":
-                rc2, sacct_out, _ = ssh(
-                    f"sacct -j {job_id} --noheader --format=State | head -1"
-                )
-                final = sacct_out.strip().split()[0] if sacct_out.strip() else "COMPLETED"
-                if final in ("COMPLETED", "COMPLETING"):
-                    break
-                raise RuntimeError(f"Job {job_id} ended: {final}")
+        if state in ("FAILED", "CANCELLED", "TIMEOUT", "NODE_FAIL"):
+            raise RuntimeError(f"Job {job_id} failed: {state}")
 
-            if state in ("FAILED", "CANCELLED", "TIMEOUT", "NODE_FAIL"):
-                raise RuntimeError(f"Job {job_id} failed: {state}")
+        time.sleep(POLL_INTERVAL)
+    else:
+        raise RuntimeError(f"Timeout waiting for job {job_id} after {MAX_POLL_HOURS}h")
 
-            if state != last_state:
-                log(f"  [{state}] job {job_id}...")
-                last_state = state
+    t_poll.done(f"job {job_id} COMPLETED")
+    return job_id
 
-            time.sleep(POLL_INTERVAL)
-        else:
-            raise RuntimeError(f"Timeout waiting for job {job_id}")
 
-        if t_train_start:
-            timing["train_sec"] = round(time.time() - t_train_start, 1)
-            log(f"  ✓ GPU train: {timing['train_sec']:.1f}s")
-        if timing["queue_sec"] == 0:          # job was instant (no RUNNING state seen)
-            timing["queue_sec"] = t_queue.elapsed()
+def phase4_rsync_results() -> None:
+    log("\n══ Phase 4: Rsync Results ← NIBI ══")
 
-        # E — Rsync model back
-        t = Timer(f"  rsync model")
-        step_local = LOCAL_MODEL_DIR / f"step_{idx:02d}"
-        rsync_from(f"{NIBI_RUN_ROOT}/current", step_local)
-        horizon_count = len(list((step_local / "models").glob("horizon_*.json")))
-        timing["rsync_sec"] = t.done(f"{horizon_count} horizon files → local")
+    # Check SIMULATION_DONE sentinel
+    rc, sentinel, _ = ssh(f"cat {NIBI_RUN_ROOT}/SIMULATION_DONE 2>/dev/null || echo MISSING")
+    if "MISSING" in sentinel:
+        log("  WARNING: SIMULATION_DONE sentinel not found — rsync anyway")
+    else:
+        log(f"  Sentinel: {sentinel.splitlines()[0]}")
 
-        # Verify trees grew
-        meta_path = step_local / "metadata.json"
-        if meta_path.exists():
-            meta = json.loads(meta_path.read_text())
-            trees = meta.get("base_trees") or meta.get("n_estimators") or "?"
-            log(f"  total trees now: {trees}")
+    t = Timer("rsync run_root/ ← NIBI")
+    LOCAL_MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    rsync_from(NIBI_RUN_ROOT, LOCAL_MODEL_DIR, timeout=600)
 
-    except Exception as exc:
-        log(f"  [ERROR] window {idx}: {exc}")
-        timing["status"] = f"error: {exc}"
-
-    timing["total_sec"] = round(time.time() - wall_t0, 1)
-    _window_timings.append(timing)
-    return timing
+    # Count step dirs
+    steps = sorted(LOCAL_MODEL_DIR.glob("step_*"))
+    t.done(f"{len(steps)} step dirs synced to {LOCAL_MODEL_DIR}")
 
 
 def print_report() -> None:
-    log("\n" + "=" * 70)
+    log("\n" + "=" * 60)
     log(" SIMULATION REPORT — April 7, 2026 Intraday Warm-Refresh")
-    log("=" * 70)
-    log(f" Log file : {LOG_FILE}")
+    log("=" * 60)
+    log(f" Log      : {LOG_FILE}")
     log(f" Artifacts: {LOCAL_MODEL_DIR}")
+
+    progress_path = LOCAL_MODEL_DIR / "simulation_progress.json"
+    if not progress_path.exists():
+        log(" (no simulation_progress.json found)")
+        log("=" * 60)
+        return
+
+    progress = json.loads(progress_path.read_text())
+    log(f" Status   : {progress.get('status')}")
+    log(f" Base train: {progress.get('base_train_sec', '?')}s")
     log("")
-    log(f" {'Win':>3}  {'ET':>5}  {'SCP':>6}  {'Queue':>6}  {'Train':>6}  {'Rsync':>6}  {'Total':>7}  {'Job ID':>12}  Status")
-    log(f" {'---':>3}  {'-----':>5}  {'------':>6}  {'------':>6}  {'------':>6}  {'------':>6}  {'-------':>7}  {'--------':>12}  ------")
+    log(f" {'Win':>3}  {'ET':>5}  {'Train':>7}  {'Total':>7}  Status")
+    log(f" {'---':>3}  {'-----':>5}  {'-------':>7}  {'-------':>7}  ------")
 
-    total_scp = total_queue = total_train = total_rsync = total_wall = 0.0
-    for t in _window_timings:
-        status = "✓" if t["status"] == "ok" else "✗"
-        log(
-            f" {t['window']:>3}  {t['et_time']:>5}  "
-            f"{t['scp_sec']:>5.0f}s  {t['queue_sec']:>5.0f}s  "
-            f"{t['train_sec']:>5.0f}s  {t['rsync_sec']:>5.0f}s  "
-            f"{t['total_sec']:>6.0f}s  {t['job_id']:>12}  {status}"
-        )
-        total_scp   += t["scp_sec"]
-        total_queue += t["queue_sec"]
-        total_train += t["train_sec"]
-        total_rsync += t["rsync_sec"]
-        total_wall  += t["total_sec"]
+    total_train = total_wall = 0.0
+    steps = progress.get("steps", [])
+    for s in steps:
+        ok = "✓" if s["status"] == "ok" else "✗"
+        train = s.get("train_sec") or 0
+        total = s.get("total_sec") or 0
+        log(f" {s['step']:>3}  {s['et_label']:>5}  {train:>6.0f}s  {total:>6.0f}s  {ok}")
+        total_train += train
+        total_wall  += total
 
-    n = len(_window_timings)
+    n = len(steps)
     if n > 0:
-        log(f" {'':>3}  {'':>5}  {'------':>6}  {'------':>6}  {'------':>6}  {'------':>6}  {'-------':>7}")
-        log(
-            f" {'TOT':>3}  {'':>5}  "
-            f"{total_scp:>5.0f}s  {total_queue:>5.0f}s  "
-            f"{total_train:>5.0f}s  {total_rsync:>5.0f}s  "
-            f"{total_wall:>6.0f}s"
-        )
-        log(
-            f" {'AVG':>3}  {'':>5}  "
-            f"{total_scp/n:>5.0f}s  {total_queue/n:>5.0f}s  "
-            f"{total_train/n:>5.0f}s  {total_rsync/n:>5.0f}s  "
-            f"{total_wall/n:>6.0f}s"
-        )
+        log(f" {'---':>3}  {'-----':>5}  {'-------':>7}  {'-------':>7}")
+        log(f" {'TOT':>3}  {'':>5}  {total_train:>6.0f}s  {total_wall:>6.0f}s")
+        log(f" {'AVG':>3}  {'':>5}  {total_train/n:>6.0f}s  {total_wall/n:>6.0f}s")
 
-    log("")
-    log(" Phase overhead (outside windows):")
-    for p in _phase_timings:
-        log(f"   {p['phase']:<30} {p['sec']:>6.1f}s")
-    log("=" * 70)
-
-    # Save report JSON
-    report = {
-        "replay_date": "2026-04-07",
-        "windows": _window_timings,
-        "phases": _phase_timings,
-        "generated_at": dt.datetime.utcnow().isoformat(),
-    }
-    report_path = LOCAL_MODEL_DIR / "simulation_timing_report.json"
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, indent=2))
-    log(f" Report saved: {report_path}")
+    log("=" * 60)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -483,12 +345,11 @@ def print_report() -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--dry-run",      action="store_true", help="Phase 0 only")
-    p.add_argument("--skip-setup",   action="store_true", help="Skip Phase 1 (repo already on NIBI)")
-    p.add_argument("--skip-extract", action="store_true", help="Skip extract (parquet already local)")
-    p.add_argument("--skip-base",    action="store_true", help="Skip Phase 3 base train (model already on NIBI)")
-    p.add_argument("--fast",         action="store_true", help="Base train: 200 trees (flow test)")
-    p.add_argument("--start-window", type=int, default=0,  help="Resume warm refresh at window index (0-25)")
-    p.add_argument("--end-window",   type=int, default=25, help="Stop after window index (default: 25)")
+    p.add_argument("--skip-setup",   action="store_true", help="Skip Phase 1 (code + model already on NIBI)")
+    p.add_argument("--skip-extract", action="store_true", help="Skip Phase 2 (parquet already local + on NIBI)")
+    p.add_argument("--skip-base",    action="store_true", help="Skip base train inside NIBI job")
+    p.add_argument("--fast",         action="store_true", help="200-tree base train (flow test)")
+    p.add_argument("--start-window", type=int, default=0,  help="Resume warm refresh from window N (0-25)")
     return p.parse_args()
 
 
@@ -496,9 +357,9 @@ def main() -> None:
     args = parse_args()
 
     log(f"Market Day Simulation — {dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
-    log(f"NIBI  : {NIBI_USER}@{NIBI_HOST}  scratch={NIBI_SCRATCH}")
-    log(f"Log   : {LOG_FILE}")
-    log(f"Windows: {args.start_window}–{args.end_window} of 0–25")
+    log(f"NIBI     : {NIBI_USER}@{NIBI_HOST}")
+    log(f"SIM_DIR  : {NIBI_SIM_DIR}")
+    log(f"Log      : {LOG_FILE}")
 
     try:
         phase0_health_check()
@@ -510,32 +371,17 @@ def main() -> None:
 
         if not args.skip_extract:
             phase2_extract_parquet()
-            phase2_scp_parquet()
+            phase2b_scp_parquet()
         else:
-            log("\n══ Phase 2: SKIPPED ══")
+            log("\n══ Phase 2: SKIPPED (--skip-extract) ══")
 
-        if not args.skip_base:
-            phase3_base_train(fast=args.fast)
-        else:
-            log("\n══ Phase 3: Base train SKIPPED ══")
+        job_id = phase3_submit_and_poll(
+            fast=args.fast,
+            skip_base=args.skip_base,
+            start_window=args.start_window,
+        )
 
-        # Load full parquet once into memory for slicing
-        log(f"\nLoading full parquet into memory ...")
-        t = Timer("load parquet")
-        df_full = pd.read_parquet(FULL_PARQUET)
-        df_full["window_ts"] = pd.to_datetime(df_full["window_ts"], utc=True)
-        t.done(f"{len(df_full):,} rows")
-
-        LOCAL_MODEL_DIR.mkdir(parents=True, exist_ok=True)
-
-        # Run each window
-        windows_to_run = WINDOWS[args.start_window: args.end_window + 1]
-        log(f"\nStarting {len(windows_to_run)} warm-refresh cycles...")
-
-        for i, window_ts in enumerate(windows_to_run):
-            global_idx = args.start_window + i
-            run_window(global_idx, window_ts, df_full)
-
+        phase4_rsync_results()
         print_report()
 
     except KeyboardInterrupt:

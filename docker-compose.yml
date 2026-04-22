@@ -150,5 +150,23 @@ services:
       - MARKET_CLOSE=${MARKET_CLOSE:-21:00}
       - LOG_DIR=/app/logs
 
+  # ── Web terminal — re-authenticate NIBI MFA from the browser ──────────────
+  # Access at http://localhost:7681
+  # Use: bash ml/ml/nibi/morning_login.sh  → approve Duo push → socket live
+  # Only needed when SSH ControlMaster socket has expired.
+  # Do NOT expose port 7681 publicly — localhost only.
+  webterminal:
+    image: tsl0922/ttyd:latest
+    restart: always
+    ports: ["127.0.0.1:7681:7681"]
+    volumes:
+      - ~/.ssh:/root/.ssh:ro
+      - ./ml:/app/ml:ro
+      - ./logs:/app/logs
+    working_dir: /app
+    command: ttyd -p 7681 -t fontSize=15 bash
+    environment:
+      - HOME=/root
+
 volumes:
   app-db-data:
