@@ -607,6 +607,9 @@ def render_simulation(stocks: list[dict], symbol: str) -> None:
     try:
         hist_raw = load_sim_history(symbol)
         hist = pd.DataFrame(hist_raw)
+        if hist.empty or "time" not in hist.columns:
+            st.info(f"No simulation history available for **{symbol}** in the simulation date range.")
+            return
         hist["date"] = pd.to_datetime(hist["time"], unit="s", utc=True)
         hist["axis_label"] = hist["date"].dt.strftime("%Y-%m-%d %H:%M")
         hist = hist.sort_values("date").reset_index(drop=True)
