@@ -39,7 +39,9 @@ router = APIRouter(prefix="/ops", tags=["ops"])
 
 # ── Paths (match monorepo layout) ──────────────────────────────────────────
 REPO_ROOT      = Path(os.getenv("REPO_ROOT", "/data/projects/Algo-trade-monorepo"))
-ARTIFACTS_DIR  = REPO_ROOT / "model_artifacts"
+# In Docker the host ./model_artifacts is mounted at /model_artifacts.
+# Override with ARTIFACTS_DIR env var to work both inside and outside Docker.
+ARTIFACTS_DIR  = Path(os.getenv("ARTIFACTS_DIR", "/model_artifacts"))
 LOGS_DIR       = REPO_ROOT / "logs"
 NIBI_ALIAS     = "nibi"
 NIBI_USER      = os.getenv("NIBI_USER", "harshsaw")
@@ -58,20 +60,32 @@ _NIBI_ALLOWED_PREFIXES = (
 
 def _ssh(cmd: str, timeout: int = 15) -> tuple[int, str, str]:
     """Run a command on NIBI over the existing ControlMaster socket."""
-    r = subprocess.run(
-        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", NIBI_ALIAS, cmd],
-        capture_output=True, text=True, timeout=timeout + 2,
-    )
-    return r.returncode, r.stdout.strip(), r.stderr.strip()
+    import shutil
+    if not shutil.which("ssh"):
+        return 1, "", "ssh not available in this environment"
+    try:
+        r = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", NIBI_ALIAS, cmd],
+            capture_output=True, text=True, timeout=timeout + 2,
+        )
+        return r.returncode, r.stdout.strip(), r.stderr.strip()
+    except FileNotFoundError:
+        return 1, "", "ssh not available in this environment"
 
 
 def _socket_alive() -> bool:
     """Check if the SSH ControlMaster socket is active."""
-    r = subprocess.run(
-        ["ssh", "-O", "check", NIBI_ALIAS],
-        capture_output=True, text=True, timeout=5,
-    )
-    return r.returncode == 0
+    import shutil
+    if not shutil.which("ssh"):
+        return False
+    try:
+        r = subprocess.run(
+            ["ssh", "-O", "check", NIBI_ALIAS],
+            capture_output=True, text=True, timeout=5,
+        )
+        return r.returncode == 0
+    except FileNotFoundError:
+        return False
 
 
 def _read_json(path: Path) -> dict:

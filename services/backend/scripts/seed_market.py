@@ -6,7 +6,13 @@ Creates:
   - market.daily_prices → ~2 years of daily OHLC per stock (mirrors fact_market_metrics)
 
 Skips weekends and US market holidays for realistic trading calendars.
-Run:  POSTGRES_SERVER=localhost python -m scripts.seed_market
+
+Public API:
+  seed(engine=None)  — idempotent; safe to call on every startup.
+                       Inserts stocks that are missing; only generates daily
+                       prices when the table is empty (to avoid duplicate work).
+
+Run standalone:  POSTGRES_SERVER=localhost python -m scripts.seed_market
 """
 
 import sys
@@ -20,10 +26,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import random
 from datetime import date, timedelta
 
-from sqlalchemy import insert, text
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
 
-from app.core.db import Base, SessionLocal, engine
-from app.modules.market.models import DailyPrice, Stock
 from scripts.stock_config import STOCKS
 
 # ---------------------------------------------------------------------------
@@ -180,39 +185,116 @@ def _gen_daily_prices(
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
+def seed(engine: Engine | None = None) -> None:
+    """
+    Idempotent seed of market.stocks and market.daily_prices.
+
+    - Inserts missing stocks (ON CONFLICT DO NOTHING on symbol PK).
+    - Generates synthetic daily prices only when market.daily_prices is empty,
+      so repeated calls on a live DB with real data are safe.
+
+    Args:
+        engine: SQLAlchemy Engine connected to the target database.
+                When None, falls back to the app's default engine from
+                app.core.config (legacy standalone usage).
+    """
+    if engine is None:
+        from app.core.config import settings
+        engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+
     end = date.today()
     start = end - timedelta(days=DAYS)
-
     holidays = _build_holidays(start.year, end.year)
 
-    # Ensure schema and tables exist
     with engine.begin() as conn:
-        conn.execute(text("CREATE SCHEMA IF NOT EXISTS market"))
-        # Drop old candles table if it still exists from earlier design
-        conn.execute(text("DROP TABLE IF EXISTS market.candles"))
-    Base.metadata.create_all(engine)
+        # --- Seed market.stocks (idempotent) ---
+        inserted = 0
+        for stock in STOCKS:
+            result = conn.execute(
+                text("""
+                    INSERT INTO market.stocks
+                        (symbol, name, sector, industry, currency, exchange, is_active)
+                    VALUES
+                        (:symbol, :name, :sector, :industry, :currency, :exchange, :is_active)
+                    ON CONFLICT (symbol) DO NOTHING
+                """),
+                {k: v for k, v in stock.items() if k != "start_price"},
+            )
+            inserted += result.rowcount
+        print(f"market.stocks: {inserted} new rows inserted ({len(STOCKS) - inserted} already present)")
 
-    with SessionLocal() as session:
-        # Clear existing data (stocks + prices)
-        session.execute(text("TRUNCATE market.daily_prices"))
-        session.execute(text("DELETE FROM market.stocks"))
+        # --- Seed market.daily_prices only when table is empty ---
+        price_count = conn.execute(text("SELECT COUNT(*) FROM market.daily_prices")).scalar()
+        if price_count and price_count > 0:
+            print(f"market.daily_prices: {price_count} rows already present — skipping synthetic generation")
+            return
 
-        # Seed stocks
-        session.execute(insert(Stock), STOCKS)
-        print(f"Seeded {len(STOCKS)} stocks")
-
-        # Seed daily prices per stock
         for stock in STOCKS:
             symbol = stock["symbol"]
             price = stock["start_price"]
             print(f"  {symbol} (${price:.2f}) ...", end=" ")
-
             rows = _gen_daily_prices(symbol, start, end, price, holidays)
-            session.execute(insert(DailyPrice), rows)
+            for row in rows:
+                conn.execute(
+                    text("""
+                        INSERT INTO market.daily_prices
+                            (symbol, date, open, high, low, close, volume,
+                             previous_close, change, change_pct)
+                        VALUES
+                            (:symbol, :date, :open, :high, :low, :close, :volume,
+                             :previous_close, :change, :change_pct)
+                        ON CONFLICT (symbol, date) DO NOTHING
+                    """),
+                    row,
+                )
             print(f"{len(rows)} trading days")
 
-        session.commit()
+    print("seed_market: done.")
+
+
+def main() -> None:
+    """Standalone entry-point: truncates and re-seeds (dev/reset use only)."""
+    from app.core.config import settings
+    engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+
+    end = date.today()
+    start = end - timedelta(days=DAYS)
+    holidays = _build_holidays(start.year, end.year)
+
+    with engine.begin() as conn:
+        conn.execute(text("TRUNCATE market.daily_prices"))
+        conn.execute(text("DELETE FROM market.stocks"))
+
+        for stock in STOCKS:
+            conn.execute(
+                text("""
+                    INSERT INTO market.stocks
+                        (symbol, name, sector, industry, currency, exchange, is_active)
+                    VALUES
+                        (:symbol, :name, :sector, :industry, :currency, :exchange, :is_active)
+                """),
+                {k: v for k, v in stock.items() if k != "start_price"},
+            )
+        print(f"Seeded {len(STOCKS)} stocks")
+
+        for stock in STOCKS:
+            symbol = stock["symbol"]
+            price = stock["start_price"]
+            print(f"  {symbol} (${price:.2f}) ...", end=" ")
+            rows = _gen_daily_prices(symbol, start, end, price, holidays)
+            for row in rows:
+                conn.execute(
+                    text("""
+                        INSERT INTO market.daily_prices
+                            (symbol, date, open, high, low, close, volume,
+                             previous_close, change, change_pct)
+                        VALUES
+                            (:symbol, :date, :open, :high, :low, :close, :volume,
+                             :previous_close, :change, :change_pct)
+                    """),
+                    row,
+                )
+            print(f"{len(rows)} trading days")
 
     print("\nDone.")
 

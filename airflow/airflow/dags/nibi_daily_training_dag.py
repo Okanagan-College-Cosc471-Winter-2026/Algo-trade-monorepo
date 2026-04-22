@@ -46,11 +46,13 @@ NIBI_ALIAS    = "nibi"                          # ~/.ssh/config Host alias
 NIBI_USER     = os.getenv("NIBI_USER",    "harshsaw")
 NIBI_SIM_DIR  = os.getenv("NIBI_SIM_DIR", "/home/harshsaw/projects/def-youry/test_simulation")
 
-DB_HOST = os.getenv("OLD_DB_HOST",  "localhost")
-DB_PORT = int(os.getenv("OLD_DB_PORT", "5432"))
-DB_NAME = os.getenv("OLD_DB_NAME",  "market_data")
-DB_USER = os.getenv("OLD_DB_USER",  "mluser")
-DB_PASS = os.getenv("OLD_DB_PASSWORD", "mlpassword")
+# Main application database — same instance the collector and backend use.
+# Set POSTGRES_* in the Airflow environment (or Docker .env) to match docker-compose.
+DB_HOST = os.getenv("POSTGRES_SERVER", os.getenv("OLD_DB_HOST",  "localhost"))
+DB_PORT = int(os.getenv("POSTGRES_PORT",   os.getenv("OLD_DB_PORT", "5432")))
+DB_NAME = os.getenv("POSTGRES_DB",     os.getenv("OLD_DB_NAME",  "market_data"))
+DB_USER = os.getenv("POSTGRES_USER",   os.getenv("OLD_DB_USER",  "mluser"))
+DB_PASS = os.getenv("POSTGRES_PASSWORD", os.getenv("OLD_DB_PASSWORD", ""))
 
 REPO_ROOT      = Path("/data/projects/Algo-trade-monorepo")
 DATASETS_DIR   = REPO_ROOT / "datasets"
@@ -62,11 +64,12 @@ NIBI_RUN_ROOT   = f"{NIBI_SIM_DIR}/run_root"
 NIBI_SBATCH     = f"{NIBI_SIM_DIR}/ml/ml/nibi/simulate_full_day.sbatch"
 
 # BASE_MODEL_DIR: resolved at task runtime via Airflow Variable "nibi_base_model_dir".
-# Falls back to env var BASE_MODEL_DIR, then to the April 7 base model.
-# Override via UI: Admin → Variables → nibi_base_model_dir = /path/to/new/base
+# Falls back to env var BASE_MODEL_DIR, then to the current_base symlink so the
+# pipeline is self-referential after the first successful run.
+# Override via UI: Admin → Variables → nibi_base_model_dir = /path/to/explicit/bundle
 _BASE_MODEL_DIR_DEFAULT = os.getenv(
     "BASE_MODEL_DIR",
-    "/data/projects/the-project-maverick/model_artifacts/base_2026-04-07",
+    str(ARTIFACTS_DIR / "current_base"),
 )
 BASE_MODEL_DIR  = Path(_BASE_MODEL_DIR_DEFAULT)  # may be overridden at runtime — see task_sync_base_model
 

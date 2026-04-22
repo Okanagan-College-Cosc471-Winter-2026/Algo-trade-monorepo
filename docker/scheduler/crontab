@@ -6,5 +6,6 @@
 # Nightly close operations: 20:05 ET = 00:05 UTC Tue–Sat
 5 0 * * 2-6 root /usr/local/bin/python /app/src/run_scheduled_operations.py >> /app/logs/pipeline.log 2>&1
 
-# NIBI warm refresh: 06:00 ET = 10:00 UTC Mon–Fri
-0 10 * * 1-5 root /usr/local/bin/python /app/src/nibi_orchestrator.py >> /app/logs/nibi.log 2>&1
+# NIBI training and warm-refresh are owned by Airflow (nibi_daily_training_dag,
+# nibi_intraday_warmrefresh_dag). Do NOT re-enable nibi_orchestrator.py here —
+# it would create duplicate Slurm job submissions.

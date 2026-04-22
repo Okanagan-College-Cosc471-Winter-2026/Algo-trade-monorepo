@@ -24,9 +24,24 @@ logger = logging.getLogger(__name__)
 # Repo root = 5 levels up from this file
 # backend/app/modules/simulation/loader.py  → 4 parents → backend/  → repo root
 _REPO_ROOT = Path(__file__).resolve().parents[4]
+_HOST_MOUNT_ARTIFACTS = Path("/model_artifacts")
+_REPO_ARTIFACTS = _REPO_ROOT / "model_artifacts"
 
-_BASE_BUNDLE_PATH = _REPO_ROOT / "model_artifacts" / "current_base"
-_REPLAY_PATH = _REPO_ROOT / "model_artifacts" / "current_simulation"
+
+def _artifacts_root() -> Path:
+    """
+    Prefer the Docker-mounted host artifacts directory when present.
+
+    In local dev outside containers, fall back to the repo-relative path.
+    """
+    if _HOST_MOUNT_ARTIFACTS.exists():
+        return _HOST_MOUNT_ARTIFACTS
+    return _REPO_ARTIFACTS
+
+
+_ARTIFACTS_ROOT = _artifacts_root()
+_BASE_BUNDLE_PATH = _ARTIFACTS_ROOT / "current_base"
+_REPLAY_PATH = _ARTIFACTS_ROOT / "current_simulation"
 _STEPS = 26
 
 
