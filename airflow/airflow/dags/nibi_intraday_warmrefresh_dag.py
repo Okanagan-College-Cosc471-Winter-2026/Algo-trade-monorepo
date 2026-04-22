@@ -56,6 +56,7 @@ from airflow import DAG
 from airflow.exceptions import AirflowException, AirflowSkipException
 from airflow.operators.python import PythonOperator
 from airflow.sensors.base import BaseSensorOperator
+from market_calendar_utils import expected_last_closed_window_start_utc, get_session_gate
 
 # ── Config ──────────────────────────────────────────────────────────────────
 NIBI_ALIAS   = "nibi"
@@ -90,6 +91,25 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 SNAPSHOT_TRADING_DAYS = 15
 
 MARKET_TZ = ZoneInfo("America/New_York")
+FRESHNESS_FILE = Path(
+    os.getenv(
+        "INTRADAY_FRESHNESS_FILE",
+        "/data/projects/Algo-trade-monorepo/logs/intraday_data_freshness.json",
+    )
+)
+
+
+def _read_latest_data_window() -> dt.datetime | None:
+    if not FRESHNESS_FILE.exists():
+        return None
+    try:
+        payload = json.loads(FRESHNESS_FILE.read_text())
+        raw = payload.get("latest_window_ts_utc")
+        if not raw:
+            return None
+        return dt.datetime.fromisoformat(raw)
+    except Exception:
+        return None
 
 # ── SSH helper ───────────────────────────────────────────────────────────────
 def _ssh(cmd: str, timeout: int = 60) -> tuple[int, str, str]:
@@ -129,20 +149,28 @@ def task_check_market_open(**ctx) -> None:
     The cron schedule targets 13:15–20:00 UTC but Airflow may drift or
     catch up missed runs.  This gate prevents redundant off-hours jobs.
     """
-    now_et = dt.datetime.now(MARKET_TZ)
-    # Allow 09:15–16:05 ET to cover the 09:30 open with some margin
-    session_open  = now_et.replace(hour=9,  minute=15, second=0, microsecond=0)
-    session_close = now_et.replace(hour=16, minute=5,  second=0, microsecond=0)
-
-    if now_et.weekday() >= 5:
-        raise AirflowSkipException(f"Weekend — skipping warm-refresh ({now_et.strftime('%A %H:%M ET')})")
-
-    if not (session_open <= now_et <= session_close):
+    now_utc = dt.datetime.now(dt.timezone.utc)
+    gate = get_session_gate(now=now_utc, tz_name="America/New_York")
+    if not gate.is_open_now:
         raise AirflowSkipException(
-            f"Outside regular session ({now_et.strftime('%H:%M ET')}) — skipping warm-refresh"
+            f"Market gate closed reason={gate.reason} now_et={gate.now_et.strftime('%Y-%m-%d %H:%M ET')}"
         )
 
-    print(f"Market open gate passed: {now_et.strftime('%Y-%m-%d %H:%M ET')}")
+    expected_window = expected_last_closed_window_start_utc(now=now_utc, tz_name="America/New_York")
+    if expected_window is None:
+        raise AirflowSkipException("No fully closed RTH window available yet.")
+
+    latest_window = _read_latest_data_window()
+    if latest_window is None or latest_window < expected_window:
+        raise AirflowSkipException(
+            "Data freshness gate not met: "
+            f"expected>={expected_window.isoformat()} got={latest_window}"
+        )
+
+    print(
+        "Market/freshness gate passed "
+        f"expected_window={expected_window.isoformat()} latest_data_window={latest_window.isoformat()}"
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -519,9 +547,8 @@ with DAG(
         "Every-15-min intraday warm-refresh: export snapshot → NIBI → "
         "sbatch sim_warm_windows → rsync artifacts → promote current_base"
     ),
-    # 13:15–20:00 UTC = 09:15–16:00 ET Mon–Fri
-    # The check_market_open task aborts gracefully outside the actual session window.
-    schedule_interval="*/15 13-20 * * 1-5",
+    # Broad trigger cadence; market/freshness gates decide execution.
+    schedule_interval="*/15 * * * 1-5",
     start_date=dt.datetime(2026, 4, 22),
     catchup=False,
     max_active_runs=1,          # never run two warm-refresh pipelines concurrently

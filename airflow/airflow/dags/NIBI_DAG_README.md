@@ -1,10 +1,17 @@
-# NIBI Daily Warm-Refresh DAG
+# NIBI Airflow DAGs
 
-**File:** `nibi_daily_training_dag.py`  
-**DAG ID:** `nibi_daily_warm_refresh`  
-**Schedule:** Mon–Fri at 10:00 UTC (06:00 ET)
+**Primary files:** `intraday_data_pipeline_dag.py`, `nibi_intraday_warmrefresh_dag.py`, `nibi_daily_training_dag.py`  
+**DAG IDs:** `intraday_data_pipeline`, `nibi_intraday_warmrefresh`, `nibi_daily_warm_refresh`  
+**Schedules:** `*/15 * * * 1-5` for intraday DAGs, `0 10 * * 1-5` for daily DAG
 
-This DAG drives the full daily ML training cycle — from exporting market data out of Postgres, through GPU training on the NIBI HPC cluster, to promoting the finished model into production and reloading the backend.
+These DAGs now form a single Airflow-owned control plane:
+- `intraday_data_pipeline`: collect -> export -> aggregate for each 15-minute window
+- `nibi_intraday_warmrefresh`: warm refresh only after the matching data window is marked fresh
+- `nibi_daily_warm_refresh`: daily base training/promotion flow
+
+The freshness contract is file-based for cross-DAG idempotency:
+- Producer: `run_15min_pipeline.py` writes `logs/intraday_data_freshness.json` after successful aggregate
+- Consumer: `nibi_intraday_warmrefresh` skips unless the marker window is current for the expected closed interval
 
 ---
 
@@ -350,11 +357,8 @@ Before this DAG can run daily:
 
 ---
 
-## Relationship to the Cron Scheduler
+## Relationship to Legacy Cron
 
-This DAG replaces `services/collector/src/nibi_orchestrator.py` in the scheduler crontab for the NIBI training step. The cron scheduler is still used for:
+Cron ownership for intraday orchestration is retired. `docker/scheduler/crontab` keeps legacy commands commented out to prevent duplicate triggers.
 
-- `*/15` during market hours → `run_15min_pipeline.py` (too frequent for Airflow overhead)
-- `20:05 ET` nightly → `run_scheduled_operations.py` (short-running, no polling needed)
-
-The NIBI job is the only step that needs Airflow — it's the only one that requires long polling, retry logic, artifact validation, and multi-step orchestration with dependencies.
+If a rollback is needed, re-enable only one owner at a time and use the intraday freshness marker (`logs/intraday_data_freshness.json`) to verify the latest closed data window before warm-refresh resumes.

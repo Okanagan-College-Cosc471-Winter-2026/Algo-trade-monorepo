@@ -48,8 +48,8 @@ End-to-end algorithmic trading system: live market data collection, ML model tra
 | Service | Port | Role |
 |---------|------|------|
 | `db` (Postgres 16) | 5433 | Single database, all schemas |
-| `collector` | — | Fetches 15-min OHLCV bars from FMP → `stg_raw` |
-| `scheduler` | — | Cron container: 15-min pipeline + nightly ops |
+| `collector` | — | Legacy standalone collector service (disabled by default) |
+| `scheduler` | — | Legacy cron scheduler (disabled by default) |
 | `backend` (FastAPI) | 8000 | Serves predictions and simulation artifacts |
 | `frontend` (Streamlit) | 8501 | Dashboard — talks to backend |
 | `dw-api` (FastAPI) | 8001 | Read-only data warehouse API |
@@ -71,7 +71,7 @@ market           ← market-facing tables (stocks, daily prices)
 operation_logs   ← pipeline audit trail
 ```
 
-Data flows left to right: `stg_raw → core_dbms → ml`. The `scheduler` container runs this ETL every 15 minutes during market hours and cleans up staging nightly.
+Data flows left to right: `stg_raw → core_dbms → ml`. Airflow owns the 15-minute orchestration and applies calendar-aware runtime gating.
 
 ---
 
@@ -95,23 +95,11 @@ This pipeline is orchestrated by Airflow. See the [DAG documentation](airflow/ai
 
 ## Scheduling Architecture
 
-Two schedulers run in parallel, each handling the work it is best suited for:
-
-### Cron Scheduler (`services/scheduler`)
-
-Used for **high-frequency, short-running tasks** that don't need visibility or retry orchestration:
-
-```
-*/15  08-23 * * 1-5   run_15min_pipeline.py     collect → ETL → aggregate
-*/15  00-01 * * 2-6   run_15min_pipeline.py     (midnight boundary, Mon–Sat UTC)
-  5     0   * * 2-6   run_scheduled_operations.py  nightly close: export + truncate
-```
-
-The 15-min pipeline runs up to 68 times a day. Airflow overhead (task scheduling, XCom, metadata writes) would add unnecessary latency. Cron is appropriate here.
+Airflow is the authoritative control plane for intraday data + model workflows.
 
 ### Airflow (hosted in `the-project-maverick`)
 
-Used for the **NIBI training job** — the only step that needs:
+Used for intraday data, warm-refresh, and daily training/promotion:
 - Long polling (up to 9 hours waiting on a Slurm queue)
 - Multi-step dependencies with data passing between tasks
 - Automatic retry with backoff
@@ -119,8 +107,24 @@ Used for the **NIBI training job** — the only step that needs:
 - Visibility into which step failed and why
 
 ```
+*/15 * * * 1-5   intraday_data_pipeline DAG    collect → export → aggregate
+*/15 * * * 1-5   nibi_intraday_warmrefresh DAG single-window warm-refresh (freshness gated)
 0 10 * * 1-5   nibi_daily_warm_refresh DAG   (10:00 UTC = 06:00 ET)
 ```
+
+All intraday gates are calendar-aware via `exchange_calendars` (`XNYS`) in `America/New_York`.
+
+### Intraday Warm-Refresh Modes
+
+- Normal mode (performance): one trigger updates one expected closed 15-minute window.
+  - Airflow passes `--single-window --as-of-ts <window_ts_utc>` into `sim_warm_windows.sbatch`.
+  - Data export is bounded lookback + expected window, not a full-day replay.
+- Recovery mode (fallback): keep multi-window replay path available for backfill or repair.
+  - Use the existing multi-window flow in `run_simulation_day.py` when single-window flags are not provided.
+
+### Legacy Cron Services
+
+`collector` and `scheduler` are now profile-gated under `legacy-orchestrator` in `docker-compose.yml` and should stay disabled in production to avoid duplicate ownership.
 
 DAG files live in this repo under `airflow/airflow/dags/`. The Maverick Airflow stack mounts them read-only:
 
@@ -130,6 +134,24 @@ volumes:
 ```
 
 See [NIBI DAG README](airflow/airflow/dags/NIBI_DAG_README.md) for the complete pipeline, concepts, and failure runbook.
+
+---
+
+## Same-Day Commissioning Checklist
+
+Use this flow when enabling Airflow intraday ownership in a fresh environment:
+
+1. Keep `collector` and `scheduler` services disabled (no `legacy-orchestrator` profile).
+2. Validate Airflow DAG parsing for `intraday_data_pipeline` and `nibi_intraday_warmrefresh`.
+3. Verify DB connectivity and write access from Airflow workers.
+4. Trigger one dry run and confirm skip logs show explicit gate reasons (`holiday`, `outside_rth`, etc.).
+5. At market hours, enable both intraday DAGs and monitor first two windows:
+   - `intraday_data_pipeline` writes `logs/intraday_data_freshness.json`
+   - `nibi_intraday_warmrefresh` runs only after freshness window is current
+6. Roll back immediately if freshness stalls or duplicate writes are detected:
+   - pause intraday DAGs
+   - fix root cause
+   - replay missed window with manual DAG run params
 
 ---
 
@@ -202,14 +224,16 @@ Algo-trade-monorepo/
 ├── airflow/
 │   └── airflow/
 │       └── dags/
-│           ├── nibi_daily_training_dag.py   ← NIBI warm-refresh DAG (production)
+│           ├── intraday_data_pipeline_dag.py ← intraday collect/export/aggregate DAG
+│           ├── nibi_intraday_warmrefresh_dag.py ← intraday warm-refresh DAG
+│           ├── nibi_daily_training_dag.py   ← daily training/promotion DAG
 │           ├── NIBI_DAG_README.md           ← DAG concepts + edge cases + runbook
 │           ├── daily_drac_training_dag.py   ← legacy (DRAC cluster, unused)
 │           ├── daily_dataset_snapshot_dag.py
 │           └── retrain_model.py
 ├── datasets/                                ← local parquet snapshots
 ├── db/init/                                 ← Postgres schema SQL (runs on first start)
-├── docker/scheduler/                        ← cron scheduler container
+├── docker/scheduler/                        ← legacy cron scheduler (disabled by default)
 ├── docker-compose.yml
 ├── logs/                                    ← simulation + pipeline logs
 │   └── nibi_usage_meter.jsonl              ← GPU job usage log (H100 hours)
@@ -227,10 +251,10 @@ Algo-trade-monorepo/
 │       └── SIMULATION_DONE
 ├── services/
 │   ├── backend/                             ← FastAPI (predictions + simulation)
-│   ├── collector/                           ← live data ingest
+│   ├── collector/                           ← collector runtime scripts
 │   ├── dw-api/                              ← data warehouse read API
 │   ├── frontend/                            ← Streamlit dashboard
-│   └── scheduler/                           ← cron container
+│   └── scheduler/                           ← legacy cron container
 └── tests/
     ├── simulate_market_day.py               ← manual simulation runner (CLI)
     └── test_*.py

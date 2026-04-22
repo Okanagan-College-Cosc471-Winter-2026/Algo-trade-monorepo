@@ -111,6 +111,7 @@ services:
       context: services/collector
       dockerfile: Dockerfile
     image: algo-collector
+    profiles: ["legacy-orchestrator"]
     restart: always
     depends_on:
       db: {condition: service_healthy, restart: true}
@@ -133,6 +134,7 @@ services:
       context: .
       dockerfile: docker/scheduler/Dockerfile
     image: algo-scheduler
+    profiles: ["legacy-orchestrator"]
     restart: always
     depends_on:
       db: {condition: service_healthy, restart: true}

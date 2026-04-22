@@ -24,12 +24,12 @@ Environment variables (same as intraday_data_collection.py):
 from __future__ import annotations
 
 import datetime as dt
+import json
 import logging
 import os
 import sys
 from datetime import timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from sqlalchemy import text
@@ -38,7 +38,7 @@ from sqlalchemy.orm import sessionmaker
 from model.orm_db import get_engine, get_session_factory
 from model.models import PipelineLog
 from utils.scheduled_pipeline import export_staging_to_core
-from utils.time_utils import is_market_open, parse_hhmm
+from utils.exchange_calendar import compute_last_closed_rth_window_start_utc
 
 load_dotenv()
 
@@ -54,12 +54,6 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger("pipeline_15m")
-
-
-def align_to_15_minute(ts: dt.datetime) -> dt.datetime:
-    """Floor timestamp to the nearest 15-minute boundary."""
-    ts = ts.replace(second=0, microsecond=0)
-    return ts - dt.timedelta(minutes=ts.minute % 15)
 
 
 def build_engine():
@@ -140,34 +134,79 @@ def run_aggregate(engine, window_ts: dt.datetime) -> bool:
         return False
 
 
+def check_latest_5m_bar(engine, window_ts: dt.datetime) -> bool:
+    """
+    Verify the latest 5-minute bar for a 15-minute window exists in core table.
+
+    Example:
+      window_ts=13:30 UTC checks for 13:40 UTC bar.
+    """
+    latest_5m_ts = window_ts + dt.timedelta(minutes=10)
+    try:
+        with engine.connect() as conn:
+            bar_count = conn.execute(
+                text("SELECT COUNT(*) FROM core_dbms.market_data_5m WHERE ts = :bar_ts"),
+                {"bar_ts": latest_5m_ts},
+            ).scalar()
+        count = int(bar_count or 0)
+        if count <= 0:
+            logger.warning(
+                "[aggregate] missing latest bar ts=%s; waiting for closed window",
+                latest_5m_ts.strftime("%Y-%m-%d %H:%M:%S+00"),
+            )
+            return False
+        logger.info(
+            "[aggregate] latest bar check passed ts=%s rows=%d",
+            latest_5m_ts.strftime("%Y-%m-%d %H:%M:%S+00"),
+            count,
+        )
+        return True
+    except Exception as exc:
+        logger.error("[aggregate] latest bar check failed: %s", exc, exc_info=True)
+        return False
+
+
+def write_freshness_marker(window_ts: dt.datetime) -> None:
+    """
+    Persist latest successful 15-minute data window for downstream DAG gating.
+    """
+    marker_path = Path(
+        os.getenv(
+            "INTRADAY_FRESHNESS_FILE",
+            "/data/projects/Algo-trade-monorepo/logs/intraday_data_freshness.json",
+        )
+    )
+    marker_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "latest_window_ts_utc": window_ts.isoformat(),
+        "updated_at_utc": dt.datetime.now(timezone.utc).isoformat(),
+    }
+    marker_path.write_text(json.dumps(payload, indent=2))
+
+
 def main() -> int:
     market_tz_str = os.getenv("MARKET_TZ", "America/New_York")
-    market_open_str = os.getenv("MARKET_OPEN", "04:00")
-    market_close_str = os.getenv("MARKET_CLOSE", "21:00")
-
-    tz = ZoneInfo(market_tz_str)
-    now_local = dt.datetime.now(tz)
-    now_utc = dt.datetime.now(timezone.utc)
-
-    try:
-        open_time = parse_hhmm(market_open_str)
-        close_time = parse_hhmm(market_close_str)
-    except ValueError as exc:
-        logger.error("Invalid market hours: %s", exc)
-        return 1
-
-    if not is_market_open(now_local, open_time, close_time):
+    current_window, session_status = compute_last_closed_rth_window_start_utc(
+        now=dt.datetime.now(timezone.utc),
+        market_tz_name=market_tz_str,
+    )
+    if current_window is None:
         logger.info(
-            "Outside market hours (%s–%s %s). Nothing to do.",
-            market_open_str, market_close_str, market_tz_str,
+            "Skipping pipeline gate_reason=%s is_trading_day=%s is_half_day=%s now_et=%s",
+            session_status.reason,
+            session_status.is_trading_day,
+            session_status.is_half_day,
+            session_status.now_et.isoformat(),
         )
         return 0
 
-    # The window that just closed (floor to 15 min, then step back one window)
-    current_window = align_to_15_minute(now_utc) - dt.timedelta(minutes=15)
-
     logger.info("=" * 60)
-    logger.info("15-min pipeline starting | window_ts=%s UTC", current_window.strftime("%Y-%m-%d %H:%M"))
+    logger.info(
+        "15-min pipeline starting | window_ts=%s UTC session_open=%s session_close=%s",
+        current_window.strftime("%Y-%m-%d %H:%M"),
+        session_status.session_open_et.isoformat() if session_status.session_open_et else "n/a",
+        session_status.session_close_et.isoformat() if session_status.session_close_et else "n/a",
+    )
     logger.info("=" * 60)
 
     try:
@@ -204,6 +243,17 @@ def main() -> int:
         return 1
 
     # ── Stage 3: Aggregate + feature engineering ──────────────────
+    latest_bar_ok = check_latest_5m_bar(engine, current_window)
+    if not latest_bar_ok:
+        log_pipeline(
+            session_factory,
+            "aggregate_15m",
+            "warning",
+            f"window={current_window.isoformat()} gate_reason=missing_latest_bar",
+        )
+        engine.dispose()
+        return 0
+
     agg_ok = run_aggregate(engine, current_window)
     log_pipeline(
         session_factory,
@@ -215,6 +265,10 @@ def main() -> int:
     engine.dispose()
 
     if agg_ok:
+        try:
+            write_freshness_marker(current_window)
+        except Exception as exc:
+            logger.warning("Could not write freshness marker: %s", exc)
         logger.info("Pipeline complete. window_ts=%s ready for inference.", current_window.strftime("%Y-%m-%d %H:%M"))
         return 0
     else:

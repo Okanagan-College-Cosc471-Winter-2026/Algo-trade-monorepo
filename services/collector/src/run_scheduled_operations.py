@@ -28,7 +28,7 @@ from utils.scheduled_pipeline import (
     clear_staging_tables,
     export_staging_to_core,
 )
-from utils.time_utils import parse_hhmm
+from utils.exchange_calendar import get_market_session_status
 
 # Setup logging to both file and stderr
 # Log directory must be pre-provisioned by setup script
@@ -80,12 +80,18 @@ def configure_logging() -> logging.Logger:
 PipelineOperation = Callable[[Session], PipelineSummary]
 
 
-def should_truncate_staging_after_close(now_local: datetime, close_time_str: str) -> bool:
-    """Return True only on weekdays at/after market close in local market time."""
-    close_time = parse_hhmm(close_time_str)
-    if now_local.weekday() >= 5:
-        return False
-    return now_local.time() >= close_time
+def should_truncate_staging_after_close(now_local: datetime, market_tz: str) -> tuple[bool, str]:
+    """Return truncate decision and reason using NYSE session close from exchange calendar."""
+    status = get_market_session_status(now=now_local, market_tz_name=market_tz)
+    if not status.is_trading_day:
+        return False, "holiday"
+    if status.session_close_et is None:
+        return False, "session_close_unavailable"
+    if now_local < status.session_close_et:
+        return False, "waiting_for_session_close"
+    if status.is_half_day:
+        return True, "half_day_after_close"
+    return True, "after_close"
 
 
 def build_pipeline_steps(now_local: datetime | None = None) -> tuple[tuple[str, Optional[str], PipelineOperation], ...]:
@@ -96,7 +102,6 @@ def build_pipeline_steps(now_local: datetime | None = None) -> tuple[tuple[str, 
     on trading weekdays, preventing daytime full-day backfill churn.
     """
     market_tz = os.getenv("MARKET_TZ", "America/New_York")
-    market_close = os.getenv("MARKET_CLOSE", "21:00")
     if now_local is None:
         now_local = datetime.now(ZoneInfo(market_tz))
 
@@ -104,7 +109,8 @@ def build_pipeline_steps(now_local: datetime | None = None) -> tuple[tuple[str, 
         ("export_stg_to_core", None, export_staging_to_core),
     ]
 
-    if should_truncate_staging_after_close(now_local, market_close):
+    should_truncate, _ = should_truncate_staging_after_close(now_local, market_tz)
+    if should_truncate:
         steps.append(("truncate_stg_raw", "export_stg_to_core", clear_staging_tables))
 
     return tuple(steps)
@@ -275,7 +281,12 @@ def main() -> int:
     configured_steps = build_pipeline_steps()
 
     if not any(step_name == "truncate_stg_raw" for step_name, _, _ in configured_steps):
-        skip_reason = "Skipped because market close has not been reached"
+        now_local = datetime.now(ZoneInfo(os.getenv("MARKET_TZ", "America/New_York")))
+        _, truncate_reason = should_truncate_staging_after_close(
+            now_local,
+            os.getenv("MARKET_TZ", "America/New_York"),
+        )
+        skip_reason = f"Skipped truncate gate_reason={truncate_reason}"
         skipped_scripts["truncate_stg_raw"] = skip_reason
         logger.info(f"truncate_stg_raw skipped. {skip_reason}.")
         log_execution(
