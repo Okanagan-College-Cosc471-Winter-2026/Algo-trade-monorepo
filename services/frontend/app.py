@@ -746,9 +746,13 @@ def render_ops() -> None:
 
     # Collector
     col = snap.get("collector", {})
-    collector_ok = col.get("last_status") == "success" and (col.get("age_min") or 9999) < 30
+    collector_state = col.get("collector_state")
+    collector_ok = collector_state in ("healthy", "expected_idle")
     c3.markdown("**Collector Pipeline**")
-    c3.markdown(_status_badge(collector_ok, "Running", "Stale / Error"), unsafe_allow_html=True)
+    if collector_state == "expected_idle":
+        c3.markdown(_status_badge(True, "Expected idle", "Stale / Error"), unsafe_allow_html=True)
+    else:
+        c3.markdown(_status_badge(collector_ok, "Running", "Stale / Error"), unsafe_allow_html=True)
     if col.get("age_min") is not None:
         c3.caption(f"Last run: {col['age_min']:.0f} min ago — {col.get('last_stage','?')} [{col.get('last_status','?')}]")
     elif col.get("error"):
@@ -757,19 +761,26 @@ def render_ops() -> None:
     # Data freshness
     data = snap.get("data", {})
     stale = data.get("staleness_min")
-    data_ok = stale is not None and stale < 20
+    freshness_state = data.get("freshness_state")
+    data_ok = freshness_state in ("fresh", "expected_idle")
     c4.markdown("**Market Data**")
-    c4.markdown(_status_badge(data_ok, "Fresh", "Stale"), unsafe_allow_html=True)
+    if freshness_state == "expected_idle":
+        c4.markdown(_status_badge(True, "Expected idle", "Stale"), unsafe_allow_html=True)
+    else:
+        c4.markdown(_status_badge(data_ok, "Fresh", "Stale"), unsafe_allow_html=True)
     if stale is not None:
         c4.caption(f"Last bar: {stale:.0f} min ago  |  {data.get('total_rows',0):,} rows")
+    if data.get("freshness_reason"):
+        c4.caption(data.get("freshness_reason"))
 
     st.divider()
 
     # ══ 2. NIBI Job Status ═════════════════════════════════════════
     st.markdown("#### NIBI Training Job")
     job = snap.get("nibi_job", {})
+    live_primary = snap.get("live_job_primary") or {}
     model = snap.get("model", {})
-    live_state = job.get("live_state") or job.get("status", "unknown")
+    live_state = (live_primary.get("state") or job.get("live_state") or job.get("status") or "unknown")
 
     state_colors = {
         "RUNNING": "#16a34a", "COMPLETED": "#0284c7", "completed": "#0284c7",
@@ -779,16 +790,22 @@ def render_ops() -> None:
     state_col = state_colors.get(live_state, "#64748b")
 
     j1, j2, j3, j4 = st.columns(4)
-    j1.metric("Job ID", job.get("job_id") or "—")
-    j2.metric("Sim Date", job.get("sim_date") or "—")
+    j1.metric("Job ID", live_primary.get("job_id") or job.get("job_id") or "—")
+    j2.metric("Job Name", live_primary.get("name") or "—")
     j3.markdown(f"**Status**")
     j3.markdown(
         f'<span style="background:{state_col};color:white;padding:3px 12px;'
         f'border-radius:12px;font-weight:700">{live_state.upper()}</span>',
         unsafe_allow_html=True,
     )
-    submitted_at = job.get("submitted_at", "")
-    j4.metric("Submitted", submitted_at[11:19] + " UTC" if len(submitted_at) > 18 else submitted_at or "—")
+    if live_primary:
+        j4.metric("Elapsed/Limit", f"{live_primary.get('elapsed', '—')} / {live_primary.get('time_lim', '—')}")
+    else:
+        submitted_at = job.get("submitted_at", "")
+        j4.metric("Submitted", submitted_at[11:19] + " UTC" if len(submitted_at) > 18 else submitted_at or "—")
+
+    if job.get("job_id") and not live_primary:
+        st.caption(f"Last submitted job record: {job.get('job_id')} ({job.get('sim_date','—')})")
 
     # Window progress bar
     w_ok    = model.get("windows_ok", 0)
@@ -944,6 +961,7 @@ def render_ops() -> None:
     # ══ 4b. NIBI Jobs ═════════════════════════════════════════════
     st.markdown("#### NIBI Jobs")
     nibi_jobs = snap.get("nibi_jobs", {})
+    nibi_user = snap.get("nibi_user") or nibi_jobs.get("user") or "harshsaw"
 
     if not nibi_jobs.get("available"):
         st.warning("SSH socket offline — NIBI job data unavailable. Reconnect via SSH section below.")
@@ -1034,10 +1052,11 @@ def render_ops() -> None:
     )
 
     preset_commands = {
-        "My jobs in queue":           f"squeue -u {snap.get('nibi_job', {}).get('sim_date', 'harshsaw')} -o '%.10i %.9P %.20j %.8u %.8T %.10M %.6D %R' 2>/dev/null || squeue -u harshsaw",
+        "My jobs in queue":           f"squeue -u {nibi_user} -o '%.10i %.9P %.20j %.8u %.8T %.10M %.6D %R' 2>/dev/null || squeue -u {nibi_user}",
         "Job accounting (last job)":  f"sacct -j {job.get('job_id', '0')} --format=JobID,State,Elapsed,Start,End,AllocCPUS --noheader 2>/dev/null",
         "NIBI GPU nodes":             "sinfo -p gpu --noheader -o '%n %t %C' 2>/dev/null | head -10",
-        "Simulation log (tail 30)":   f"tail -30 {NIBI_SIM_DIR}/logs/sim_full_day_{job.get('job_id','0')}.out 2>/dev/null || echo 'log not found'",
+        "Latest sim log (tail 30)":   f"ls -1t {NIBI_SIM_DIR}/logs/sim_*.out 2>/dev/null | head -1 | xargs -r tail -30",
+        "Latest base log (tail 30)":  f"ls -1t {NIBI_SIM_DIR}/logs/base_*.out 2>/dev/null | head -1 | xargs -r tail -30",
         "Disk quota":                 "quota -s 2>/dev/null || df -h $HOME",
         "Custom…":                    "",
     }
@@ -1045,7 +1064,7 @@ def render_ops() -> None:
     preset = st.selectbox("Quick commands", list(preset_commands.keys()), key="nibi_preset")
     default_cmd = preset_commands[preset]
     cmd_input = st.text_input("Command", value=default_cmd, key="nibi_cmd",
-                              placeholder="squeue -u harshsaw")
+                              placeholder=f"squeue -u {nibi_user}")
 
     if st.button("Run on NIBI", type="primary", disabled=not ssh.get("alive")):
         if not ssh.get("alive"):

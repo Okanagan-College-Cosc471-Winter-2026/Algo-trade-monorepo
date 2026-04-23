@@ -1,0 +1,264 @@
+name: algo-trade-monorepo
+services:
+  adminer:
+    depends_on:
+      db:
+        condition: service_started
+        required: true
+    environment:
+      ADMINER_DESIGN: pepa-linha-dark
+    image: adminer
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "8082"
+        protocol: tcp
+    restart: always
+  backend:
+    build:
+      context: /data/projects/Algo-trade-monorepo
+      dockerfile: services/backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+        required: true
+      prestart:
+        condition: service_completed_successfully
+        required: true
+    environment:
+      ACTIVE_MODEL: current_base
+      BACKEND_CORS_ORIGINS: http://localhost
+      BACKEND_URL: http://backend:8000
+      DATASETS_DIR: ./datasets
+      DOMAIN: localhost
+      ENVIRONMENT: local
+      FMP_API_DELAY_SECONDS: "0.35"
+      FMP_API_KEY: 7iSiCJecOuzJYx5xQr61Xd0f8NgNOnsU
+      FRONTEND_HOST: http://localhost
+      LOG_DIR: ./logs
+      MARKET_CLOSE: "21:00"
+      MARKET_OPEN: "04:00"
+      MARKET_TZ: America/New_York
+      NIBI_ACCOUNT: def-youry
+      NIBI_HOST: nibi.sharcnet.ca
+      NIBI_PARTITION: gpu
+      NIBI_PROJECT: /home/harshsaw/projects/def-youry
+      NIBI_SCRATCH: /scratch/harshsaw
+      NIBI_SIM_DIR: /home/harshsaw/projects/def-youry/test_simulation
+      NIBI_SSH_KEY: /root/.ssh/nibi_key
+      NIBI_USER: harshsaw
+      OLD_DB_HOST: localhost
+      OLD_DB_NAME: market_data
+      OLD_DB_PASSWORD: mlpassword
+      OLD_DB_PORT: "5432"
+      OLD_DB_USER: mluser
+      POSTGRES_DB: algotrade
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_PORT: "5432"
+      POSTGRES_SERVER: db
+      POSTGRES_USER: appuser
+      SYMBOLS: AAPL,MSFT
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:8000/api/v1/utils/health-check/
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: maverick-backend
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    restart: always
+    volumes:
+      - type: bind
+        source: /data/projects/Algo-trade-monorepo/datasets
+        target: /data/datasets
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /data/projects/Algo-trade-monorepo/model_artifacts
+        target: /model_artifacts
+        read_only: true
+        bind:
+          create_host_path: true
+  db:
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: algotrade
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_USER: appuser
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U appuser -d algotrade
+      timeout: 10s
+      interval: 10s
+      retries: 5
+      start_period: 30s
+    image: postgres:16
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5433"
+        protocol: tcp
+    restart: always
+    volumes:
+      - type: volume
+        source: app-db-data
+        target: /var/lib/postgresql/data/pgdata
+        volume: {}
+      - type: bind
+        source: /data/projects/Algo-trade-monorepo/db/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind:
+          create_host_path: true
+  dw-api:
+    build:
+      context: /data/projects/Algo-trade-monorepo/services/dw-api
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+        required: true
+    environment:
+      DATABASE_URL: postgresql+asyncpg://appuser:changeme@db:5432/algotrade
+      ENVIRONMENT: production
+    image: algo-dw-api
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8001
+        published: "8001"
+        protocol: tcp
+    restart: always
+  frontend:
+    build:
+      context: /data/projects/Algo-trade-monorepo/services/frontend
+      dockerfile: Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+        required: true
+    environment:
+      API_BASE_URL: http://backend:8000/api/v1
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      STREAMLIT_SERVER_ENABLE_CORS: "false"
+      STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION: "false"
+      STREAMLIT_SERVER_HEADLESS: "true"
+    image: maverick-streamlit
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8501
+        published: "8501"
+        protocol: tcp
+    restart: always
+  prestart:
+    build:
+      context: /data/projects/Algo-trade-monorepo
+      dockerfile: services/backend/Dockerfile
+    command:
+      - bash
+      - scripts/prestart.sh
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+        required: true
+    environment:
+      ACTIVE_MODEL: current_base
+      BACKEND_CORS_ORIGINS: http://localhost
+      BACKEND_URL: http://backend:8000
+      DATASETS_DIR: ./datasets
+      DOMAIN: localhost
+      ENVIRONMENT: local
+      FMP_API_DELAY_SECONDS: "0.35"
+      FMP_API_KEY: 7iSiCJecOuzJYx5xQr61Xd0f8NgNOnsU
+      FRONTEND_HOST: http://localhost
+      LOG_DIR: ./logs
+      MARKET_CLOSE: "21:00"
+      MARKET_OPEN: "04:00"
+      MARKET_TZ: America/New_York
+      NIBI_ACCOUNT: def-youry
+      NIBI_HOST: nibi.sharcnet.ca
+      NIBI_PARTITION: gpu
+      NIBI_PROJECT: /home/harshsaw/projects/def-youry
+      NIBI_SCRATCH: /scratch/harshsaw
+      NIBI_SIM_DIR: /home/harshsaw/projects/def-youry/test_simulation
+      NIBI_SSH_KEY: /root/.ssh/nibi_key
+      NIBI_USER: harshsaw
+      OLD_DB_HOST: localhost
+      OLD_DB_NAME: market_data
+      OLD_DB_PASSWORD: mlpassword
+      OLD_DB_PORT: "5432"
+      OLD_DB_USER: mluser
+      POSTGRES_DB: algotrade
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_PORT: "5432"
+      POSTGRES_SERVER: db
+      POSTGRES_USER: appuser
+      SYMBOLS: AAPL,MSFT
+    image: maverick-backend
+    networks:
+      default: null
+  webterminal:
+    command:
+      - ttyd
+      - -p
+      - "7681"
+      - -t
+      - fontSize=15
+      - bash
+    environment:
+      HOME: /root
+    image: tsl0922/ttyd:latest
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 7681
+        published: "7681"
+        protocol: tcp
+    restart: always
+    volumes:
+      - type: bind
+        source: /home/ubuntu/.ssh
+        target: /root/.ssh
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /data/projects/Algo-trade-monorepo/ml
+        target: /app/ml
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /data/projects/Algo-trade-monorepo/logs
+        target: /app/logs
+        bind:
+          create_host_path: true
+    working_dir: /app
+networks:
+  default:
+    name: algo-trade-monorepo_default
+volumes:
+  app-db-data:
+    name: algo-trade-monorepo_app-db-data

@@ -988,9 +988,9 @@ def task_reload_backend(**ctx):
 # concurrent runs would overwrite each other's run_root/.
 #
 # CONCEPT: schedule timing
-#   "0 10 * * 1-5"  = 10:00 UTC, Monday–Friday = 06:00 ET
-#   This fires AFTER morning_login.sh should have been run (market opens at 09:30 ET).
-#   The ControlMaster opened for market open is reused here.
+#   "0 21 * * 1-5"  = 21:00 UTC, Monday–Friday = 17:00 ET
+#   Fires 1 hour after market close (16:00 ET), after intraday data settles.
+#   morning_login.sh ControlMaster must still be alive (ControlPersist=24h covers this).
 #
 # CONCEPT: catchup=False
 #   If the DAG was paused for 3 days and you re-enable it, Airflow will NOT
@@ -1006,7 +1006,7 @@ with DAG(
         "email_on_failure": False,
     },
     description="Daily NIBI warm-refresh: export → sync → train → promote",
-    schedule="0 10 * * 1-5",           # 10:00 UTC = 06:00 ET, Mon–Fri
+    schedule="0 21 * * 1-5",           # 21:00 UTC = 17:00 ET (1h after close), Mon–Fri
     start_date=dt.datetime(2026, 4, 1),
     catchup=False,
     max_active_runs=1,                  # prevents concurrent run_root/ collisions

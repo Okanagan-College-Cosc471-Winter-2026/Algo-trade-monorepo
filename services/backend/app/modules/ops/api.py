@@ -26,6 +26,7 @@ import shlex
 import subprocess
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import psutil
 from fastapi import APIRouter, Depends, HTTPException
@@ -51,7 +52,7 @@ NIBI_SIM_DIR   = os.getenv("NIBI_SIM_DIR", "/home/harshsaw/projects/def-youry/te
 # Prefix-matched — e.g. "squeue" allows "squeue -u harshsaw -h -o '%T'".
 _NIBI_ALLOWED_PREFIXES = (
     "squeue", "sacct", "sinfo", "scontrol show job",
-    "cat ", "tail ", "ls ", "find ", "echo ", "hostname",
+    "cat ", "tail ", "ls ", "echo ", "hostname",
     "du -sh", "quota", "nvidia-smi",
 )
 
@@ -235,11 +236,11 @@ def _nibi_jobs_info(alive: bool) -> dict:
     if not alive:
         return {"available": False}
 
-    result: dict[str, Any] = {"available": True}
+    result: dict[str, Any] = {"available": True, "user": NIBI_USER}
 
     # Active / pending jobs
     rc, out, _ = _ssh(
-        "squeue -u harshsaw --format='%.10i %.20j %.8T %.10M %.9l %S' --noheader 2>/dev/null",
+        f"squeue -u {NIBI_USER} --format='%.10i %.20j %.8T %.10M %.9l %S' --noheader 2>/dev/null",
         timeout=12,
     )
     queued = []
@@ -259,7 +260,7 @@ def _nibi_jobs_info(alive: bool) -> dict:
 
     # Recent job history (last 10 jobs)
     rc2, out2, _ = _ssh(
-        "sacct -u harshsaw --starttime=now-7days "
+        f"sacct -u {NIBI_USER} --starttime=now-7days "
         "--format='JobID,JobName,State,ExitCode,Elapsed,Start' "
         "--noheader --parsable2 2>/dev/null | grep -v '\\.' | head -15",
         timeout=15,
@@ -280,10 +281,73 @@ def _nibi_jobs_info(alive: bool) -> dict:
     result["history"] = history
 
     # Scratch quota
-    rc3, out3, _ = _ssh("quota -s 2>/dev/null || df -h /scratch/harshsaw 2>/dev/null | tail -1", timeout=8)
+    rc3, out3, _ = _ssh(f"quota -s 2>/dev/null || df -h /scratch/{NIBI_USER} 2>/dev/null | tail -1", timeout=8)
     result["quota_raw"] = out3[:300] if rc3 == 0 else None
 
     return result
+
+
+def _primary_live_job(nibi_jobs: dict) -> dict[str, Any] | None:
+    """Pick a primary live job for top-card display: RUNNING first, then PENDING."""
+    queued = nibi_jobs.get("queued", [])
+    if not queued:
+        return None
+    for state in ("RUNNING", "PENDING"):
+        for job in queued:
+            if str(job.get("state", "")).upper() == state:
+                return job
+    return queued[0]
+
+
+def _market_state(now_utc: dt.datetime) -> dict[str, Any]:
+    """
+    Lightweight market-hours state (NYSE regular session).
+    Note: holiday-aware precision can be added later with calendar integration.
+    """
+    now_et = now_utc.astimezone(ZoneInfo("America/New_York"))
+    is_weekday = now_et.weekday() < 5
+    open_time = now_et.replace(hour=9, minute=30, second=0, microsecond=0)
+    close_time = now_et.replace(hour=16, minute=0, second=0, microsecond=0)
+    is_open = is_weekday and (open_time <= now_et <= close_time)
+    return {
+        "tz": "America/New_York",
+        "now_et": now_et.isoformat(),
+        "is_weekday": is_weekday,
+        "is_open": is_open,
+        "session_open_et": "09:30",
+        "session_close_et": "16:00",
+    }
+
+
+def _compute_freshness(last_ts: dt.datetime | None, total_rows: int, now_utc: dt.datetime) -> dict[str, Any]:
+    """Normalize freshness into explicit states to avoid off-hours false alarms."""
+    market = _market_state(now_utc)
+    if not last_ts:
+        return {
+            "last_window_ts": None,
+            "total_rows": int(total_rows),
+            "staleness_min": None,
+            "freshness_state": "error",
+            "freshness_reason": "No market_data_15m rows found",
+            "market_state": market,
+        }
+
+    staleness_min = round((now_utc - last_ts.replace(tzinfo=dt.timezone.utc)).total_seconds() / 60, 1)
+    if market["is_open"]:
+        state = "fresh" if staleness_min < 20 else "stale"
+        reason = "Within live-session freshness threshold" if state == "fresh" else "Live session data lag exceeds threshold"
+    else:
+        state = "expected_idle"
+        reason = "Outside regular market session"
+
+    return {
+        "last_window_ts": last_ts.isoformat(),
+        "total_rows": int(total_rows),
+        "staleness_min": staleness_min,
+        "freshness_state": state,
+        "freshness_reason": reason,
+        "market_state": market,
+    }
 
 
 def _nibi_gpu_info(alive: bool) -> dict | None:
@@ -320,26 +384,20 @@ def get_ops_status(db: Session = Depends(get_db)) -> dict:
     # 1. SSH socket
     ssh_alive = _socket_alive()
 
-    # 2. NIBI job record
+    # 2. NIBI job record (best-effort, local log)
     job = _nibi_job_info()
 
-    # 3. Live squeue check (only if socket alive and a job is known)
-    nibi_live_state: str | None = None
-    if ssh_alive and job.get("job_id"):
-        rc, sq, _ = _ssh(
-            f"squeue -j {job['job_id']} -h -o '%T' 2>/dev/null || "
-            f"sacct -j {job['job_id']} --format=State --noheader 2>/dev/null | head -1",
-            timeout=12,
-        )
-        if rc == 0 and sq.strip():
-            nibi_live_state = sq.strip().split()[0]
-
-    # 4. Active model
+    # 3. Active model
     model = _active_model_info()
 
-    # 5. NIBI GPU (only if a job is RUNNING) + live queue/history
-    nibi_gpu  = _nibi_gpu_info(ssh_alive) if nibi_live_state == "RUNNING" else None
+    # 4. Live queue/history (authoritative for current job state)
     nibi_jobs = _nibi_jobs_info(ssh_alive)
+    live_primary = _primary_live_job(nibi_jobs) if nibi_jobs.get("available") else None
+    nibi_live_state = str((live_primary or {}).get("state", "")).upper() if live_primary else None
+
+    # 5. NIBI GPU (only when at least one live job is RUNNING)
+    any_running = any(str(j.get("state", "")).upper() == "RUNNING" for j in nibi_jobs.get("queued", []))
+    nibi_gpu = _nibi_gpu_info(ssh_alive) if any_running else None
 
     # 6. Data freshness
     freshness: dict[str, Any] = {}
@@ -348,13 +406,7 @@ def get_ops_status(db: Session = Depends(get_db)) -> dict:
             "SELECT MAX(window_ts) AS last_ts, COUNT(*) AS total_rows "
             "FROM ml.market_data_15m"
         )).mappings().one()
-        last_ts = row["last_ts"]
-        freshness = {
-            "last_window_ts": last_ts.isoformat() if last_ts else None,
-            "total_rows":     int(row["total_rows"]),
-            "staleness_min":  round((now - last_ts.replace(tzinfo=dt.timezone.utc)).total_seconds() / 60, 1)
-                              if last_ts else None,
-        }
+        freshness = _compute_freshness(row["last_ts"], int(row["total_rows"]), now)
     except Exception as exc:
         freshness = {"error": str(exc)}
 
@@ -369,20 +421,32 @@ def get_ops_status(db: Session = Depends(get_db)) -> dict:
         if rows:
             r = rows[0]
             last_run = r["created_at"].replace(tzinfo=dt.timezone.utc)
+            market = _market_state(now)
+            age_min = round((now - last_run).total_seconds() / 60, 1)
+            if market["is_open"]:
+                collector_state = "healthy" if r["status"] == "success" and age_min < 30 else "stale_or_error"
+                collector_reason = "Collector updates within live-session threshold" if collector_state == "healthy" else "Collector lag/error during market hours"
+            else:
+                collector_state = "expected_idle"
+                collector_reason = "Outside regular market session"
             collector = {
                 "last_stage":  r["pipeline_stage"],
                 "last_status": r["status"],
                 "last_run_at": last_run.isoformat(),
-                "age_min":     round((now - last_run).total_seconds() / 60, 1),
+                "age_min":     age_min,
                 "message":     r["message"],
+                "collector_state": collector_state,
+                "collector_reason": collector_reason,
             }
     except Exception as exc:
         collector = {"error": str(exc)}
 
     return {
         "generated_at": now.isoformat(),
+        "nibi_user":    NIBI_USER,
         "ssh_socket":   {"alive": ssh_alive},
         "nibi_job":     {**job, "live_state": nibi_live_state},
+        "live_job_primary": live_primary,
         "nibi_jobs":    nibi_jobs,
         "model":        model,
         "machine":      _machine_info(),
@@ -526,13 +590,8 @@ def get_data_freshness(db: Session = Depends(get_db)) -> dict:
             "COUNT(DISTINCT symbol) AS symbols "
             "FROM ml.market_data_15m"
         )).mappings().one()
-        last_ts = row["last_ts"]
-        return {
-            "last_window_ts": last_ts.isoformat() if last_ts else None,
-            "total_rows":     int(row["total_rows"]),
-            "symbols":        int(row["symbols"]),
-            "staleness_min":  round((now - last_ts.replace(tzinfo=dt.timezone.utc)).total_seconds() / 60, 1)
-                              if last_ts else None,
-        }
+        payload = _compute_freshness(row["last_ts"], int(row["total_rows"]), now)
+        payload["symbols"] = int(row["symbols"])
+        return payload
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
