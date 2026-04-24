@@ -1,6 +1,7 @@
 # ── Shared Airflow block ────────────────────────────────────────────────────
 x-airflow-common: &airflow-common
   image: apache/airflow:2.9.3
+  user: "1000:0"
   restart: unless-stopped
   depends_on:
     db: {condition: service_healthy}
@@ -27,8 +28,8 @@ x-airflow-common: &airflow-common
     NIBI_USER: harshsaw
     NIBI_HOST: nibi.sharcnet.ca
     NIBI_SIM_DIR: /home/harshsaw/projects/def-youry/test_simulation
-    NIBI_SSH_KEY: /root/.ssh/nibi_key
-    NIBI_SOCKET_DIR: /root/.ssh/cm
+    NIBI_SSH_KEY: /home/airflow/.ssh/nibi_key
+    NIBI_SOCKET_DIR: /home/airflow/.ssh/cm
     # Backend + paths
     BACKEND_URL: http://backend:8000
     REPO_ROOT: /data/projects/Algo-trade-monorepo
@@ -43,7 +44,7 @@ x-airflow-common: &airflow-common
     - airflow-logs:/opt/airflow/logs
     - ./ml:/app/ml
     - /data/projects/Algo-trade-monorepo:/data/projects/Algo-trade-monorepo
-    - ~/.ssh:/root/.ssh:ro
+    - /home/ubuntu/.ssh:/home/airflow/.ssh:rw
 
 services:
 
@@ -209,7 +210,7 @@ services:
     restart: always
     ports: ["127.0.0.1:7681:7681"]
     volumes:
-      - ~/.ssh:/root/.ssh:ro
+      - /home/ubuntu/.ssh:/root/.ssh:rw
       - ./ml:/app/ml:ro
       - ./logs:/app/logs
     working_dir: /app
