@@ -6,6 +6,23 @@ __pycache__/
 dist/
 build/
 logs/
+
+# Large data files
 datasets/*.parquet
 datasets/*.csv
+
+# Backups (contain large archives and DB dumps)
+backups/
+
+# Model artifacts
 model_artifacts/*/models/
+
+# Large binary/archive types anywhere in repo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
+*.dump
+*.db
+*.sqlite
+*.sqlite3

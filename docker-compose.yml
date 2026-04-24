@@ -1,3 +1,50 @@
+# ── Shared Airflow block ────────────────────────────────────────────────────
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.3
+  restart: unless-stopped
+  depends_on:
+    db: {condition: service_healthy}
+  env_file: .env
+  environment:
+    # Airflow metadata database (separate from the application DB)
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://appuser:changeme@db:5432/airflow
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__WEBSERVER__SECRET_KEY: maverick-airflow-secret-2026
+    # DAG environment — application (algotrade) database
+    POSTGRES_SERVER: db
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: algotrade
+    POSTGRES_USER: appuser
+    POSTGRES_PASSWORD: changeme
+    # OLD_DB_* aliases (some DAGs read these)
+    OLD_DB_HOST: db
+    OLD_DB_PORT: "5432"
+    OLD_DB_NAME: algotrade
+    OLD_DB_USER: appuser
+    OLD_DB_PASSWORD: changeme
+    # NIBI HPC
+    NIBI_USER: harshsaw
+    NIBI_HOST: nibi.sharcnet.ca
+    NIBI_SIM_DIR: /home/harshsaw/projects/def-youry/test_simulation
+    NIBI_SSH_KEY: /root/.ssh/nibi_key
+    NIBI_SOCKET_DIR: /root/.ssh/cm
+    # Backend + paths
+    BACKEND_URL: http://backend:8000
+    REPO_ROOT: /data/projects/Algo-trade-monorepo
+    ARTIFACTS_DIR: /model_artifacts
+    DATASETS_DIR: /data/datasets
+    # Extra pip packages baked in at container startup
+    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-ssh psycopg2-binary"
+  volumes:
+    - ./airflow/airflow/dags:/opt/airflow/dags:ro
+    - ./model_artifacts:/model_artifacts
+    - ./datasets:/data/datasets
+    - airflow-logs:/opt/airflow/logs
+    - ./ml:/app/ml
+    - /data/projects/Algo-trade-monorepo:/data/projects/Algo-trade-monorepo
+    - ~/.ssh:/root/.ssh:ro
+
 services:
 
   db:
@@ -170,5 +217,35 @@ services:
     environment:
       - HOME=/root
 
+  # ── Airflow — one-shot init (runs db migrate + creates admin user) ─────────
+  airflow-init:
+    <<: *airflow-common
+    restart: "no"
+    command: bash -c "airflow db migrate && (airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@algo.local || true)"
+
+  # ── Airflow webserver (:8081) ──────────────────────────────────────────────
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports: ["8081:8080"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ── Airflow scheduler ─────────────────────────────────────────────────────
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "airflow", "jobs", "check", "--job-type", "SchedulerJob", "--limit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
 volumes:
   app-db-data:
+  airflow-logs:
