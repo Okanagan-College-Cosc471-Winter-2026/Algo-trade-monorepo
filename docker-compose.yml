@@ -35,7 +35,7 @@ x-airflow-common: &airflow-common
     ARTIFACTS_DIR: /model_artifacts
     DATASETS_DIR: /data/datasets
     # Extra pip packages baked in at container startup
-    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-ssh psycopg2-binary"
+    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-ssh psycopg2-binary exchange-calendars"
   volumes:
     - ./airflow/airflow/dags:/opt/airflow/dags:ro
     - ./model_artifacts:/model_artifacts
