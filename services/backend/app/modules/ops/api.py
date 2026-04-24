@@ -580,6 +580,108 @@ def nibi_relogin() -> dict:
     }
 
 
+def _airflow_status() -> dict:
+    """Query Airflow metadata DB for DAG statuses and recent run history."""
+    try:
+        import psycopg
+    except ImportError:
+        return {"error": "psycopg not available", "dags": [], "recent_runs": []}
+
+    host   = os.getenv("POSTGRES_SERVER", "db")
+    port   = int(os.getenv("POSTGRES_PORT", "5432"))
+    user   = os.getenv("POSTGRES_USER", "appuser")
+    passwd = os.getenv("POSTGRES_PASSWORD", "changeme")
+
+    try:
+        conn = psycopg.connect(
+            host=host, port=port, dbname="airflow",
+            user=user, password=passwd,
+            connect_timeout=5,
+        )
+    except Exception as exc:
+        return {"error": str(exc), "dags": [], "recent_runs": []}
+
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                # DAG list with latest run state
+                cur.execute("""
+                    SELECT
+                        d.dag_id,
+                        d.is_paused,
+                        d.is_active,
+                        d.schedule_interval,
+                        d.next_dagrun,
+                        dr.state        AS last_state,
+                        dr.run_type     AS last_run_type,
+                        dr.start_date   AS last_start,
+                        dr.end_date     AS last_end,
+                        dr.run_id       AS last_run_id
+                    FROM dag d
+                    LEFT JOIN LATERAL (
+                        SELECT state, run_type, start_date, end_date, run_id
+                        FROM dag_run
+                        WHERE dag_id = d.dag_id
+                        ORDER BY execution_date DESC
+                        LIMIT 1
+                    ) dr ON true
+                    ORDER BY d.dag_id
+                """)
+                cols = [desc[0] for desc in cur.description]
+                dags = []
+                for row in cur.fetchall():
+                    r = dict(zip(cols, row))
+                    dags.append({
+                        "dag_id":        r["dag_id"],
+                        "is_paused":     r["is_paused"],
+                        "is_active":     r["is_active"],
+                        "schedule":      r["schedule_interval"],
+                        "next_run":      r["next_dagrun"].isoformat() if r["next_dagrun"] else None,
+                        "last_state":    r["last_state"],
+                        "last_run_type": r["last_run_type"],
+                        "last_start":    r["last_start"].isoformat() if r["last_start"] else None,
+                        "last_end":      r["last_end"].isoformat() if r["last_end"] else None,
+                        "last_run_id":   r["last_run_id"],
+                    })
+
+                # Recent runs (last 20 across all DAGs)
+                cur.execute("""
+                    SELECT dag_id, run_id, state, run_type,
+                           execution_date, start_date, end_date
+                    FROM dag_run
+                    ORDER BY execution_date DESC
+                    LIMIT 20
+                """)
+                cols2 = [desc[0] for desc in cur.description]
+                recent_runs = []
+                for row in cur.fetchall():
+                    r = dict(zip(cols2, row))
+                    duration = None
+                    if r["start_date"] and r["end_date"]:
+                        duration = round((r["end_date"] - r["start_date"]).total_seconds())
+                    recent_runs.append({
+                        "dag_id":     r["dag_id"],
+                        "run_id":     r["run_id"],
+                        "state":      r["state"],
+                        "run_type":   r["run_type"],
+                        "started":    r["start_date"].isoformat() if r["start_date"] else None,
+                        "ended":      r["end_date"].isoformat() if r["end_date"] else None,
+                        "duration_s": duration,
+                    })
+
+        return {"error": None, "dags": dags, "recent_runs": recent_runs}
+    except Exception as exc:
+        return {"error": str(exc), "dags": [], "recent_runs": []}
+    finally:
+        conn.close()
+
+
+@router.get("/airflow")
+def get_airflow_status() -> dict:
+    """DAG statuses and recent run history from the Airflow metadata database."""
+    return _airflow_status()
+
+
 @router.get("/data/freshness")
 def get_data_freshness(db: Session = Depends(get_db)) -> dict:
     """Latest window_ts and row count from ml.market_data_15m."""

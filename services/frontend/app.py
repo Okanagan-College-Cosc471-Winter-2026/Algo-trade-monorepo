@@ -16,6 +16,7 @@ from api import (
     health_check,
     list_snapshots,
     list_stocks,
+    ops_airflow,
     ops_data_freshness,
     ops_nibi_exec,
     ops_nibi_relogin,
@@ -1044,7 +1045,84 @@ def render_ops() -> None:
 
     st.divider()
 
-    # ══ 6. NIBI SSH Terminal ═══════════════════════════════════════
+    # ══ 6. Airflow DAG Status ═════════════════════════════════════
+    st.markdown("#### Airflow DAG Pipeline")
+    st.caption("Live from the Airflow metadata DB — refresh page to update. UI at http://localhost:8081 (admin/admin)")
+
+    try:
+        af = ops_airflow()
+    except ApiError as exc:
+        st.error(f"Could not reach Airflow metadata DB: {exc}")
+        af = {"dags": [], "recent_runs": [], "error": str(exc)}
+
+    if af.get("error"):
+        st.warning(f"Airflow DB error: {af['error']}")
+
+    dags = af.get("dags", [])
+    if dags:
+        _state_colors = {
+            "success": "#16a34a", "running": "#0284c7",
+            "failed": "#dc2626", "queued": "#d97706",
+            "up_for_retry": "#d97706", "skipped": "#64748b",
+        }
+
+        for dag in dags:
+            dag_id     = dag["dag_id"]
+            is_paused  = dag.get("is_paused", True)
+            last_state = dag.get("last_state") or "never run"
+            last_start = (dag.get("last_start") or "")[:16].replace("T", " ")
+            last_end   = (dag.get("last_end") or "")[:16].replace("T", " ")
+            schedule   = dag.get("schedule") or "—"
+            next_run   = (dag.get("next_run") or "")[:16].replace("T", " ")
+
+            pause_badge = (
+                '<span style="background:#64748b;color:white;padding:1px 7px;'
+                'border-radius:10px;font-size:0.72rem">PAUSED</span>'
+                if is_paused else
+                '<span style="background:#16a34a;color:white;padding:1px 7px;'
+                'border-radius:10px;font-size:0.72rem">ACTIVE</span>'
+            )
+            state_col = _state_colors.get(last_state, "#94a3b8")
+            state_badge = (
+                f'<span style="background:{state_col};color:white;padding:1px 7px;'
+                f'border-radius:10px;font-size:0.72rem">{last_state.upper()}</span>'
+            )
+            next_str = f"next `{next_run}`" if next_run else ""
+            st.markdown(
+                f"**{dag_id}** &nbsp; {pause_badge} &nbsp; {state_badge} &nbsp; "
+                f"schedule: `{schedule}` &nbsp; {next_str} &nbsp; "
+                f"last: `{last_start}` → `{last_end or '…'}`",
+                unsafe_allow_html=True,
+            )
+
+        recent_runs = af.get("recent_runs", [])
+        if recent_runs:
+            with st.expander("Recent runs (last 20)", expanded=False):
+                df_af = pd.DataFrame(recent_runs)
+                for col in ("started", "ended"):
+                    if col in df_af.columns:
+                        df_af[col] = df_af[col].str[:16].str.replace("T", " ", regex=False)
+                state_map = {
+                    "success": "✅ success", "running": "🔵 running",
+                    "failed": "❌ failed", "queued": "🟡 queued",
+                }
+                df_af["state"] = df_af["state"].map(lambda s: state_map.get(s, s))
+                st.dataframe(df_af, use_container_width=True, hide_index=True,
+                    column_config={
+                        "dag_id":     st.column_config.TextColumn("DAG", width="medium"),
+                        "state":      st.column_config.TextColumn("State", width="medium"),
+                        "run_type":   st.column_config.TextColumn("Type", width="small"),
+                        "started":    st.column_config.TextColumn("Started", width="medium"),
+                        "ended":      st.column_config.TextColumn("Ended", width="medium"),
+                        "duration_s": st.column_config.NumberColumn("Duration (s)", format="%d"),
+                        "run_id":     st.column_config.TextColumn("Run ID", width="large"),
+                    })
+    else:
+        st.info("No DAGs found — Airflow may still be initialising.")
+
+    st.divider()
+
+    # ══ 8. NIBI SSH Terminal ═══════════════════════════════════════
     st.markdown("#### NIBI Remote Commands")
     st.caption(
         "Runs over the existing SSH ControlMaster socket (no MFA needed while socket is alive). "

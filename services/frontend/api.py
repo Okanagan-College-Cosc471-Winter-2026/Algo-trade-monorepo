@@ -135,6 +135,11 @@ def ops_data_freshness() -> dict[str, Any]:
     return _request("GET", "/ops/data/freshness")
 
 
+def ops_airflow() -> dict[str, Any]:
+    """DAG statuses and recent runs from the Airflow metadata database."""
+    return _request("GET", "/ops/airflow")
+
+
 def ops_nibi_relogin() -> dict[str, Any]:
     """
     Trigger auto_login.py on the backend to re-establish the SSH ControlMaster.
