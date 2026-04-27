@@ -285,3 +285,9 @@ python ml/ml/scripts/fetch_new_date.py --date 2026-04-09
 # Check simulation logs
 tail -f logs/sim_marketday_$(date +%Y%m%d)_*.log
 ```
+
+
+  ssh -i ~/.ssh/nibi_key \                                                                                                                           
+      -o ControlMaster=yes \                                                                                                                         
+      -o ControlPath=/home/ubuntu/.ssh/cm/nibi-harshsaw@nibi.sharcnet.ca:22 \                                                                        
+      -o ControlPersist=12h \                                                                                                                         harshsaw@nibi.sharcnet.ca 

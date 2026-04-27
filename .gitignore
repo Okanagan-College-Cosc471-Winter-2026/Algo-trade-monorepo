@@ -26,3 +26,12 @@ model_artifacts/*/models/
 *.db
 *.sqlite
 *.sqlite3
+
+# Agent and tooling environments
+.claude/
+.codex/
+pipeline-venv/
+
+# Graphify cache and intermediates
+graphify-out/.graphify_*
+graphify-out/cache/

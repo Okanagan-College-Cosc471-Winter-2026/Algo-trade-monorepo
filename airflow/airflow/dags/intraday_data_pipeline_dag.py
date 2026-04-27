@@ -19,6 +19,7 @@ from market_calendar_utils import expected_last_closed_window_start_utc
 
 REPO_ROOT = Path("/data/projects/Algo-trade-monorepo")
 PIPELINE_SCRIPT = REPO_ROOT / "services" / "collector" / "src" / "run_15min_pipeline.py"
+PIPELINE_PYTHON = REPO_ROOT / "pipeline-venv" / "bin" / "python"
 FRESHNESS_FILE = Path(
     os.getenv("INTRADAY_FRESHNESS_FILE", str(REPO_ROOT / "logs" / "intraday_data_freshness.json"))
 )
@@ -51,8 +52,14 @@ def task_run_intraday_data_pipeline(**_ctx) -> None:
 
     env = os.environ.copy()
     env["INTRADAY_FRESHNESS_FILE"] = str(FRESHNESS_FILE)
+    # Map POSTGRES_* env vars (Airflow convention) to DB_* (pipeline script convention)
+    env.setdefault("DB_HOST",     env.get("POSTGRES_SERVER", "localhost"))
+    env.setdefault("DB_PORT",     env.get("POSTGRES_PORT",   "5432"))
+    env.setdefault("DB_NAME",     env.get("POSTGRES_DB",     ""))
+    env.setdefault("DB_USER",     env.get("POSTGRES_USER",   ""))
+    env.setdefault("DB_PASSWORD", env.get("POSTGRES_PASSWORD", ""))
     proc = subprocess.run(
-        ["python", str(PIPELINE_SCRIPT)],
+        [str(PIPELINE_PYTHON), str(PIPELINE_SCRIPT)],
         cwd=str(REPO_ROOT),
         env=env,
         capture_output=True,

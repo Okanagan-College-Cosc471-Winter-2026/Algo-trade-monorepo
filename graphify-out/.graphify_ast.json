@@ -39868,39 +39868,1353 @@
       "weight": 1.0
     },
     {
-      "source": "app_rationale_133",
-      "target": "api_apierror",
+      "source": "api_rationale_1",
+      "target": "schemas_nextdaypredictionresponse",
       "relation": "uses",
       "confidence": "INFERRED",
-      "source_file": "/data/projects/Algo-trade-monorepo/services/frontend/app.py",
+      "source_file": "services/backend/app/modules/inference/api.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_22",
+      "target": "schemas_nextdaypredictionresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/api.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_47",
+      "target": "schemas_nextdaypredictionresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/api.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "service_inferenceservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/api.py",
+      "source_location": "L15",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_22",
+      "target": "service_inferenceservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/api.py",
+      "source_location": "L15",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_47",
+      "target": "service_inferenceservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/api.py",
+      "source_location": "L15",
+      "weight": 0.8
+    },
+    {
+      "source": "service_inferenceservice",
+      "target": "schemas_nextdaybarprediction",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/service.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_1",
+      "target": "schemas_nextdaybarprediction",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/service.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_28",
+      "target": "schemas_nextdaybarprediction",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/service.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_86",
+      "target": "schemas_nextdaybarprediction",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/service.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "service_inferenceservice",
+      "target": "schemas_nextdaypredictionresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/service.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_1",
+      "target": "schemas_nextdaypredictionresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/service.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_28",
+      "target": "schemas_nextdaypredictionresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/service.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_86",
+      "target": "schemas_nextdaypredictionresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/inference/service.py",
+      "source_location": "L14",
+      "weight": 0.8
+    },
+    {
+      "source": "models_stock",
+      "target": "db_base",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/models.py",
+      "source_location": "L16",
+      "weight": 0.8
+    },
+    {
+      "source": "models_dailyprice",
+      "target": "db_base",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/models.py",
+      "source_location": "L16",
+      "weight": 0.8
+    },
+    {
+      "source": "models_rationale_1",
+      "target": "db_base",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/models.py",
+      "source_location": "L16",
+      "weight": 0.8
+    },
+    {
+      "source": "models_rationale_20",
+      "target": "db_base",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/models.py",
+      "source_location": "L16",
+      "weight": 0.8
+    },
+    {
+      "source": "models_rationale_41",
+      "target": "db_base",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/models.py",
+      "source_location": "L16",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "schemas_coverageread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
       "source_location": "L11",
       "weight": 0.8
     },
     {
-      "source": "app_rationale_224",
-      "target": "api_apierror",
+      "source": "api_rationale_19",
+      "target": "schemas_coverageread",
       "relation": "uses",
       "confidence": "INFERRED",
-      "source_file": "/data/projects/Algo-trade-monorepo/services/frontend/app.py",
+      "source_file": "services/backend/app/modules/market/api.py",
       "source_location": "L11",
       "weight": 0.8
     },
     {
-      "source": "app_rationale_361",
-      "target": "api_apierror",
+      "source": "api_rationale_30",
+      "target": "schemas_coverageread",
       "relation": "uses",
       "confidence": "INFERRED",
-      "source_file": "/data/projects/Algo-trade-monorepo/services/frontend/app.py",
+      "source_file": "services/backend/app/modules/market/api.py",
       "source_location": "L11",
       "weight": 0.8
     },
     {
-      "source": "app_rationale_422",
-      "target": "api_apierror",
+      "source": "api_rationale_47",
+      "target": "schemas_coverageread",
       "relation": "uses",
       "confidence": "INFERRED",
-      "source_file": "/data/projects/Algo-trade-monorepo/services/frontend/app.py",
+      "source_file": "services/backend/app/modules/market/api.py",
       "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_76",
+      "target": "schemas_coverageread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_19",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_30",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_47",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_76",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_19",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_30",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_47",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_76",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L11",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "service_marketservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L12",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_19",
+      "target": "service_marketservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L12",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_30",
+      "target": "service_marketservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L12",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_47",
+      "target": "service_marketservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L12",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_76",
+      "target": "service_marketservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/api.py",
+      "source_location": "L12",
+      "weight": 0.8
+    },
+    {
+      "source": "service_marketservice",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_1",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_17",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_21",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_40",
+      "target": "schemas_ohlcread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_marketservice",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_1",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_17",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_21",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_40",
+      "target": "schemas_stockread",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/market/service.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_34",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_44",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_53",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_75",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_101",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_163",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_34",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_44",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_53",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_75",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_101",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_163",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_34",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_44",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_53",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_75",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_101",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_163",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_1",
+      "target": "service_simulationservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L27",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_34",
+      "target": "service_simulationservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L27",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_44",
+      "target": "service_simulationservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L27",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_53",
+      "target": "service_simulationservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L27",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_75",
+      "target": "service_simulationservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L27",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_101",
+      "target": "service_simulationservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L27",
+      "weight": 0.8
+    },
+    {
+      "source": "api_rationale_163",
+      "target": "service_simulationservice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/api.py",
+      "source_location": "L27",
+      "weight": 0.8
+    },
+    {
+      "source": "service_simulationservice",
+      "target": "schemas_simbar",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_1",
+      "target": "schemas_simbar",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_24",
+      "target": "schemas_simbar",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_44",
+      "target": "schemas_simbar",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_67",
+      "target": "schemas_simbar",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_100",
+      "target": "schemas_simbar",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_112",
+      "target": "schemas_simbar",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_simulationservice",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_1",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_24",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_44",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_67",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_100",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_112",
+      "target": "schemas_simbaseresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_simulationservice",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_1",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_24",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_44",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_67",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_100",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_112",
+      "target": "schemas_simsessioninfo",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_simulationservice",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_1",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_24",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_44",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_67",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_100",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "service_rationale_112",
+      "target": "schemas_simstepresponse",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/modules/simulation/service.py",
+      "source_location": "L8",
+      "weight": 0.8
+    },
+    {
+      "source": "env_rationale_38",
+      "target": "db_base",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/alembic/env.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "env_rationale_59",
+      "target": "db_base",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/alembic/env.py",
+      "source_location": "L22",
+      "weight": 0.8
+    },
+    {
+      "source": "env_rationale_38",
+      "target": "models_stock",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/alembic/env.py",
+      "source_location": "L23",
+      "weight": 0.8
+    },
+    {
+      "source": "env_rationale_59",
+      "target": "models_stock",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/alembic/env.py",
+      "source_location": "L23",
+      "weight": 0.8
+    },
+    {
+      "source": "env_rationale_38",
+      "target": "models_dailyprice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/alembic/env.py",
+      "source_location": "L23",
+      "weight": 0.8
+    },
+    {
+      "source": "env_rationale_59",
+      "target": "models_dailyprice",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/backend/app/alembic/env.py",
+      "source_location": "L23",
+      "weight": 0.8
+    },
+    {
+      "source": "run_15min_pipeline_rationale_84",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_15min_pipeline.py",
+      "source_location": "L39",
+      "weight": 0.8
+    },
+    {
+      "source": "run_15min_pipeline_rationale_103",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_15min_pipeline.py",
+      "source_location": "L39",
+      "weight": 0.8
+    },
+    {
+      "source": "run_15min_pipeline_rationale_122",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_15min_pipeline.py",
+      "source_location": "L39",
+      "weight": 0.8
+    },
+    {
+      "source": "run_15min_pipeline_rationale_138",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_15min_pipeline.py",
+      "source_location": "L39",
+      "weight": 0.8
+    },
+    {
+      "source": "run_15min_pipeline_rationale_170",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_15min_pipeline.py",
+      "source_location": "L39",
+      "weight": 0.8
+    },
+    {
+      "source": "intraday_data_collection_rationale_1",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/intraday_data_collection.py",
+      "source_location": "L43",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_44",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L24",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_84",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L24",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_98",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L24",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_120",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L24",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_139",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L24",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_176",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L24",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_205",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L24",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_239",
+      "target": "models_pipelinelog",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L24",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_44",
+      "target": "scheduled_pipeline_pipelinesummary",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L26",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_84",
+      "target": "scheduled_pipeline_pipelinesummary",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L26",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_98",
+      "target": "scheduled_pipeline_pipelinesummary",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L26",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_120",
+      "target": "scheduled_pipeline_pipelinesummary",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L26",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_139",
+      "target": "scheduled_pipeline_pipelinesummary",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L26",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_176",
+      "target": "scheduled_pipeline_pipelinesummary",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L26",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_205",
+      "target": "scheduled_pipeline_pipelinesummary",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L26",
+      "weight": 0.8
+    },
+    {
+      "source": "run_scheduled_operations_rationale_239",
+      "target": "scheduled_pipeline_pipelinesummary",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/run_scheduled_operations.py",
+      "source_location": "L26",
+      "weight": 0.8
+    },
+    {
+      "source": "gather_past_data_rationale_1",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/gather_past_data.py",
+      "source_location": "L48",
+      "weight": 0.8
+    },
+    {
+      "source": "gather_past_data_rationale_64",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/gather_past_data.py",
+      "source_location": "L48",
+      "weight": 0.8
+    },
+    {
+      "source": "gather_past_data_rationale_119",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/gather_past_data.py",
+      "source_location": "L48",
+      "weight": 0.8
+    },
+    {
+      "source": "orm_db_rationale_1",
+      "target": "models_base",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/model/orm_db.py",
+      "source_location": "L30",
+      "weight": 0.8
+    },
+    {
+      "source": "scheduled_pipeline_pipelinesummary",
+      "target": "models_dataqualityerror",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/scheduled_pipeline.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "scheduled_pipeline_pipelinesummary",
+      "target": "models_dedupconflict",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/scheduled_pipeline.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "scheduled_pipeline_pipelinesummary",
+      "target": "models_ingesterror",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/scheduled_pipeline.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "scheduled_pipeline_pipelinesummary",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/scheduled_pipeline.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "scheduled_pipeline_pipelinesummary",
+      "target": "models_marketdata5m",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/scheduled_pipeline.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "scheduled_pipeline_pipelinesummary",
+      "target": "models_pipelinewatermark",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/scheduled_pipeline.py",
+      "source_location": "L13",
+      "weight": 0.8
+    },
+    {
+      "source": "collector_shared_rationale_1",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/collector_shared.py",
+      "source_location": "L18",
+      "weight": 0.8
+    },
+    {
+      "source": "collector_shared_rationale_31",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/collector_shared.py",
+      "source_location": "L18",
+      "weight": 0.8
+    },
+    {
+      "source": "collector_shared_rationale_54",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/collector_shared.py",
+      "source_location": "L18",
+      "weight": 0.8
+    },
+    {
+      "source": "collector_shared_rationale_149",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/collector_shared.py",
+      "source_location": "L18",
+      "weight": 0.8
+    },
+    {
+      "source": "collector_shared_rationale_164",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/collector_shared.py",
+      "source_location": "L18",
+      "weight": 0.8
+    },
+    {
+      "source": "collector_shared_rationale_220",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/collector_shared.py",
+      "source_location": "L18",
+      "weight": 0.8
+    },
+    {
+      "source": "collector_shared_rationale_285",
+      "target": "models_marketdata",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "services/collector/src/utils/collector_shared.py",
+      "source_location": "L18",
       "weight": 0.8
     }
   ],

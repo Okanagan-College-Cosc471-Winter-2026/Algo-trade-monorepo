@@ -547,8 +547,8 @@ with DAG(
         "Every-15-min intraday warm-refresh: export snapshot → NIBI → "
         "sbatch sim_warm_windows → rsync artifacts → promote current_base"
     ),
-    # Broad trigger cadence; market/freshness gates decide execution.
-    schedule_interval="*/15 * * * 1-5",
+    # Offset 5 min after intraday_data_pipeline (*/15) so freshness file is ready.
+    schedule_interval="5,20,35,50 * * * 1-5",
     start_date=dt.datetime(2026, 4, 22),
     catchup=False,
     max_active_runs=1,          # never run two warm-refresh pipelines concurrently
