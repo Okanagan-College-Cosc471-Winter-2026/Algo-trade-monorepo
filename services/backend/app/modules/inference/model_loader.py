@@ -135,3 +135,11 @@ def get_model_bundle() -> BaseModelBundle:
     bundle_path = Path(__file__).resolve().parents[4] / "model_artifacts" / settings.ACTIVE_MODEL
     logger.info("Loading active model bundle from %s", bundle_path)
     return create_model_bundle(bundle_path)
+
+
+@lru_cache(maxsize=1)
+def get_base_eod_bundle() -> BaseModelBundle:
+    """Load the EOD base model (trained at yesterday's market close, static all day)."""
+    bundle_path = Path(__file__).resolve().parents[4] / "model_artifacts" / settings.BASE_EOD_MODEL
+    logger.info("Loading base EOD model bundle from %s", bundle_path)
+    return create_model_bundle(bundle_path)

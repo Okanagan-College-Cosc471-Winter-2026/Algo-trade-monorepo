@@ -46,6 +46,7 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str = "MarketSight"
     ACTIVE_MODEL: str = "current_base"
+    BASE_EOD_MODEL: str = "current_base_eod"
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str

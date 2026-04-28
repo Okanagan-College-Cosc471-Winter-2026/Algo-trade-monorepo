@@ -59,6 +59,10 @@ def predict(symbol: str) -> dict[str, Any]:
     return _request("GET", f"/inference/predict/{symbol.upper()}")
 
 
+def predict_base(symbol: str) -> dict[str, Any]:
+    return _request("GET", f"/inference/predict-base/{symbol.upper()}")
+
+
 def build_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
     return _request("POST", "/data/build-snapshot", json=payload)
 

@@ -24,6 +24,7 @@ from api import (
     ops_pipeline_logs,
     ops_status,
     predict,
+    predict_base,
     sim_base,
     sim_history,
     sim_ohlc,
@@ -129,12 +130,12 @@ def ohlc_df(symbol: str, days: int) -> pd.DataFrame:
 
 # ── Chart builders ────────────────────────────────────────────────────────────
 
-def build_price_chart(df: pd.DataFrame, title: str, prediction: dict | None = None) -> go.Figure:
-    """Candlestick + volume chart. Prediction path overlaid as dotted amber line."""
+def build_price_chart(df: pd.DataFrame, title: str, base_prediction: dict | None = None, warm_prediction: dict | None = None) -> go.Figure:
+    """Candlestick + volume chart. Base EOD (amber dot) and warm refresh (blue dash) overlaid."""
     fig = go.Figure()
 
     # Separate history from prediction date
-    pred_date_str = (prediction or {}).get("prediction_date", "")[:10]
+    pred_date_str = (base_prediction or warm_prediction or {}).get("prediction_date", "")[:10]
     hist = df[df["date"].dt.date.astype(str) < pred_date_str] if pred_date_str else df
 
     # Candlestick
@@ -154,25 +155,48 @@ def build_price_chart(df: pd.DataFrame, title: str, prediction: dict | None = No
         opacity=0.18, yaxis="y2",
     ))
 
-    # Prediction path
-    if prediction:
-        path = prediction.get("path", [])
-        if path and pred_date_str:
-            path_x = [f"{pred_date_str} {b['bar_time']}" for b in path]
+    # Base EOD prediction — amber dotted (static all day)
+    if base_prediction:
+        path = base_prediction.get("path", [])
+        bp_date = base_prediction.get("prediction_date", "")[:10]
+        if path and bp_date:
+            path_x = [f"{bp_date} {b['bar_time']}" for b in path]
             path_y = [b["pred_close"] for b in path]
             fig.add_trace(go.Scatter(
                 x=path_x, y=path_y,
-                mode="lines+markers", name="Predicted Path",
+                mode="lines+markers", name="Base EOD Prediction",
                 line={"color": "#f59e0b", "width": 2, "dash": "dot"},
                 marker={"size": 4, "color": "#f59e0b"},
             ))
             end_price = path_y[-1]
             fig.add_annotation(
                 x=path_x[-1], y=end_price,
-                text=f"Pred EOD ${end_price:.2f}",
+                text=f"Base EOD ${end_price:.2f}",
                 showarrow=True, arrowhead=2, ax=32, ay=-40,
                 bgcolor="rgba(245,158,11,0.12)", bordercolor="#f59e0b",
                 font={"size": 11, "color": "#92400e"},
+            )
+
+    # Warm refresh prediction — blue dashed (updates every 15 min)
+    if warm_prediction:
+        path = warm_prediction.get("path", [])
+        wp_date = warm_prediction.get("prediction_date", "")[:10]
+        if path and wp_date:
+            path_x = [f"{wp_date} {b['bar_time']}" for b in path]
+            path_y = [b["pred_close"] for b in path]
+            fig.add_trace(go.Scatter(
+                x=path_x, y=path_y,
+                mode="lines+markers", name="Warm Refresh Prediction",
+                line={"color": "#3b82f6", "width": 2, "dash": "dash"},
+                marker={"size": 4, "color": "#3b82f6"},
+            ))
+            end_price = path_y[-1]
+            fig.add_annotation(
+                x=path_x[-1], y=end_price,
+                text=f"Warm ${end_price:.2f}",
+                showarrow=True, arrowhead=2, ax=32, ay=-20,
+                bgcolor="rgba(59,130,246,0.12)", bordercolor="#3b82f6",
+                font={"size": 11, "color": "#1e40af"},
             )
 
     # Pin tick labels to first bar of each trading day — clean "Apr 7" style labels
@@ -359,46 +383,77 @@ def build_sim_chart(
 @st.fragment
 def stocks_chart_fragment(symbol: str, days: int, detail: dict) -> None:
     """Chart + prediction toggle — reruns in isolation; no page scroll."""
-    show_pred = st.toggle("Overlay model prediction", value=False, key=f"pred_toggle_{symbol}")
-    prediction = None
-    if show_pred:
-        with st.spinner("Running inference..."):
-            try:
-                prediction = predict(symbol)
-            except ApiError as exc:
-                st.error(str(exc))
+    show_pred = st.toggle("Overlay predictions", value=False, key=f"pred_toggle_{symbol}")
+    base_pred = None
+    warm_pred = None
 
-    if prediction:
-        path = prediction.get("path", [])
-        end_price = path[-1]["pred_close"] if path else prediction["current_price"]
-        full_ret = prediction.get("predicted_full_day_return", 0.0)
-        direction = prediction.get("predicted_direction", "—")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Latest Price", f"${prediction['current_price']:.2f}")
-        c2.metric("Predicted EOD", f"${end_price:.2f}")
-        c3.metric("Full-Day Return", f"{full_ret:.2f}%",
-                  delta=f"{'▲' if direction=='up' else '▼'} {direction}")
-        c4.metric("Model", prediction["model_version"])
+    if show_pred:
+        col1, col2 = st.columns(2)
+        with col1:
+            with st.spinner("Loading base EOD prediction..."):
+                try:
+                    base_pred = predict_base(symbol)
+                except ApiError as exc:
+                    st.error(f"Base model: {exc}")
+        with col2:
+            with st.spinner("Loading warm refresh prediction..."):
+                try:
+                    warm_pred = predict(symbol)
+                except ApiError as exc:
+                    st.error(f"Warm model: {exc}")
+
+    if base_pred or warm_pred:
+        ref = base_pred or warm_pred
+        st.markdown(
+            '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;'
+            'padding:12px 16px 8px 16px;margin-bottom:8px">'
+            '<div style="font-size:0.75rem;font-weight:600;color:#64748b;letter-spacing:.05em;'
+            'margin-bottom:8px">PREDICTION SUMMARY</div>',
+            unsafe_allow_html=True,
+        )
+        pc1, pc2, pc3, pc4, pc5 = st.columns(5)
+        pc1.metric("Current Price", f"${ref['current_price']:.2f}")
+        if base_pred:
+            path = base_pred.get("path", [])
+            eod = path[-1]["pred_close"] if path else base_pred["current_price"]
+            full_ret = base_pred.get("predicted_full_day_return", 0.0)
+            direction = base_pred.get("predicted_direction", "—")
+            chg = eod - ref["current_price"]
+            pc2.metric("Base EOD Target", f"${eod:.2f}",
+                       delta=f"{chg:+.2f} ({full_ret:+.2f}%)")
+        if warm_pred:
+            path = warm_pred.get("path", [])
+            eod = path[-1]["pred_close"] if path else warm_pred["current_price"]
+            full_ret = warm_pred.get("predicted_full_day_return", 0.0)
+            chg = eod - ref["current_price"]
+            pc4.metric("Warm Refresh Target", f"${eod:.2f}",
+                       delta=f"{chg:+.2f} ({full_ret:+.2f}%)")
+        pc5.metric("Model", (warm_pred or base_pred).get("model_version", "—"))
+        st.markdown("</div>", unsafe_allow_html=True)
 
     df = ohlc_df(symbol, days)
     if df.empty:
         st.warning("No OHLC data available for this symbol.")
         return
-    fig = build_price_chart(df, f"{detail.get('name', symbol)} ({symbol})", prediction)
+    fig = build_price_chart(df, f"{detail.get('name', symbol)} ({symbol})",
+                            base_prediction=base_pred, warm_prediction=warm_pred)
     st.plotly_chart(fig, use_container_width=True)
 
-    info_tab, data_tab = st.tabs(["Summary", "Raw Data"])
+    info_tab, data_tab = st.tabs(["Company Info", "Raw Data"])
     with info_tab:
-        c1, c2 = st.columns(2)
-        c1.write(f"**Sector:** {detail.get('sector') or 'N/A'}")
-        c1.write(f"**Industry:** {detail.get('industry') or 'N/A'}")
-        c1.write(f"**Exchange:** {detail.get('exchange') or 'N/A'}")
-        c2.write(f"**High:** ${float(df['high'].max()):.2f}")
-        c2.write(f"**Low:** ${float(df['low'].min()):.2f}")
-        c2.write(f"**Latest Vol:** {int(df['volume'].iloc[-1]):,}")
+        ic1, ic2, ic3 = st.columns(3)
+        ic1.markdown(f"**Company**  \n{detail.get('name') or symbol}")
+        ic1.markdown(f"**Sector**  \n{detail.get('sector') or 'N/A'}")
+        ic1.markdown(f"**Industry**  \n{detail.get('industry') or 'N/A'}")
+        ic2.markdown(f"**Exchange**  \n{detail.get('exchange') or 'N/A'}")
+        ic2.markdown(f"**Period High**  \n${float(df['high'].max()):.2f}")
+        ic2.markdown(f"**Period Low**  \n${float(df['low'].min()):.2f}")
+        ic3.markdown(f"**Latest Vol**  \n{int(df['volume'].iloc[-1]):,}")
+        ic3.markdown(f"**Avg Vol (20)**  \n{int(df['volume'].tail(20).mean()):,}")
+        ic3.markdown(f"**Bars loaded**  \n{len(df):,}")
     with data_tab:
         raw = df[["date","open","high","low","close","volume"]].tail(200).sort_values("date", ascending=False)
-        st.dataframe(raw, use_container_width=True, hide_index=True, height=360,
+        st.dataframe(raw, use_container_width=True, hide_index=True, height=380,
             column_config={
                 "date": st.column_config.DatetimeColumn("Timestamp", format="YYYY-MM-DD HH:mm"),
                 "open": st.column_config.NumberColumn("Open", format="$%.2f"),
@@ -524,18 +579,37 @@ def render_stocks(stocks: list[dict], symbol: str, days: int) -> None:
         return
     detail = next((s for s in stocks if s["symbol"] == symbol), {})
 
-    # Top metrics (outside fragment — only reruns when symbol/days change)
+    # Top metrics bar
     df = ohlc_df(symbol, days)
     if not df.empty:
         latest = float(df["close"].iloc[-1])
+        prev   = float(df["close"].iloc[-2]) if len(df) > 1 else latest
+        day_chg = latest - prev
+        day_pct = (day_chg / prev * 100) if prev else 0.0
         first  = float(df["close"].iloc[0])
         period_ret = ((latest / first) - 1) * 100 if first else 0.0
+        hi52 = float(df["high"].max())
+        lo52 = float(df["low"].min())
         avg_vol = float(df["volume"].tail(20).mean())
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Latest Close", f"${latest:.2f}")
-        c2.metric("Period Return", f"{period_ret:.2f}%")
-        c3.metric("Avg Vol (20)", f"{int(avg_vol):,}")
-        c4.metric("Bars", f"{len(df):,}")
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Last Close", f"${latest:.2f}",
+                  delta=f"{day_chg:+.2f} ({day_pct:+.2f}%)")
+        c2.metric(f"{days}d Return", f"{period_ret:+.2f}%")
+        c3.metric(f"{days}d High / Low", f"${hi52:.2f} / ${lo52:.2f}")
+        c4.metric("Avg Vol (20-bar)", f"{int(avg_vol):,}")
+        c5.metric("Exchange", detail.get("exchange") or "—")
+
+    # Legend for prediction overlays
+    st.markdown(
+        '<div style="display:flex;gap:20px;align-items:center;padding:6px 0 2px 0;font-size:0.82rem;color:#475569">'
+        '<span style="display:inline-block;width:28px;height:0;border-top:2px dotted #f59e0b;'
+        'vertical-align:middle;margin-right:5px"></span><span style="color:#92400e">Base EOD (static all day)</span>'
+        '&nbsp;&nbsp;&nbsp;'
+        '<span style="display:inline-block;width:28px;height:0;border-top:2px dashed #3b82f6;'
+        'vertical-align:middle;margin-right:5px"></span><span style="color:#1e40af">Warm Refresh (updates every 15 min)</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # Fragment handles prediction toggle + chart (no scroll on toggle)
     stocks_chart_fragment(symbol, days, detail)
@@ -718,6 +792,23 @@ def _status_badge(ok: bool, label_ok: str, label_bad: str) -> str:
 
 def render_ops() -> None:
     st.subheader("System Operations")
+
+    # ── NIBI SSH banner (fast check before full snapshot) ──────────
+    try:
+        ssh_check = ops_nibi_ssh()
+        nibi_alive = ssh_check.get("alive", False)
+    except Exception:
+        nibi_alive = False
+
+    if not nibi_alive:
+        st.error(
+            "**NIBI SSH socket is DOWN** — model training is unavailable. "
+            "The system is running in degraded mode: data collection and inference "
+            "continue using the current model, but no new training will occur until "
+            "the connection is restored. Run `morning_login.sh` on the host machine "
+            "to re-establish the ControlMaster socket.",
+            icon="🔴",
+        )
 
     # ── Fetch snapshot ─────────────────────────────────────────────
     with st.spinner("Loading ops status…"):

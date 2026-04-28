@@ -10,7 +10,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.modules.inference.features import prepare_production_features
-from app.modules.inference.model_loader import get_model_bundle
+from app.modules.inference.model_loader import BaseModelBundle, get_model_bundle
 from app.modules.inference.schemas import (
     NextDayBarPrediction,
     NextDayPredictionResponse,
@@ -28,8 +28,8 @@ class InferenceService:
     """Service for making stock price predictions."""
 
     @staticmethod
-    def predict_stock_price(session: Session, symbol: str) -> NextDayPredictionResponse:
-        return InferenceService._predict_next_day_path(session, symbol)
+    def predict_stock_price(session: Session, symbol: str, bundle: BaseModelBundle | None = None) -> NextDayPredictionResponse:
+        return InferenceService._predict_next_day_path(session, symbol, bundle=bundle)
 
     # ------------------------------------------------------------------
     # Legacy single-horizon predictor — commented out, bars-only now
@@ -82,7 +82,7 @@ class InferenceService:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _predict_next_day_path(session: Session, symbol: str) -> NextDayPredictionResponse:
+    def _predict_next_day_path(session: Session, symbol: str, bundle: BaseModelBundle | None = None) -> NextDayPredictionResponse:
         """
         Predict the full next-day 15-min price path using NextDayPathBundle.
         """
@@ -96,7 +96,7 @@ class InferenceService:
         if not recent_bars:
             raise ValueError(f"No engineered inference features available for {symbol}")
 
-        model_bundle = get_model_bundle()
+        model_bundle = bundle if bundle is not None else get_model_bundle()
         bars_df = pd.DataFrame(recent_bars)
         features = prepare_production_features(bars_df, model_bundle.feature_names)
         latest_bar = bars_df.sort_values("window_ts").iloc[-1]
