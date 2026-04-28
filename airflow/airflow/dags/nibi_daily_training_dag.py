@@ -890,11 +890,12 @@ def task_rsync_artifacts_back(**ctx):
 #   • Old artifact directory cleanup — we keep last 7 days, remove older ones
 # ══════════════════════════════════════════════════════════════════════════════
 def _atomic_symlink(symlink: Path, target: Path) -> None:
-    """Atomically update a symlink via Linux rename() — never leaves symlink dangling."""
+    """Atomically update a symlink via Linux rename() — uses relative path for Docker compat."""
     tmp = symlink.parent / (symlink.name + ".new")
     if tmp.exists() or tmp.is_symlink():
         tmp.unlink()
-    tmp.symlink_to(target.resolve())
+    # Relative symlink: resolves correctly both on host and inside Docker container
+    tmp.symlink_to(target.name)
     tmp.rename(symlink)
 
 
@@ -912,6 +913,10 @@ def task_promote_model(**ctx):
     # Atomically promote current_base → warm_{date}
     _atomic_symlink(ARTIFACTS_DIR / "current_base", warm_dir)
     print(f"Promoted: current_base → {warm_dir}")
+
+    # Also promote current_base_eod — static snapshot used for all-day base prediction
+    _atomic_symlink(ARTIFACTS_DIR / "current_base_eod", warm_dir)
+    print(f"Promoted: current_base_eod → {warm_dir}")
 
     # Promote current_simulation → simulation_{date} only if all 26 steps have predictions
     n_with_preds = sum(
@@ -959,7 +964,8 @@ def task_promote_model(**ctx):
 # ══════════════════════════════════════════════════════════════════════════════
 def task_reload_backend(**ctx):
     for endpoint, label in [
-        ("/api/v1/inference/admin/reload-model",        "inference"),
+        ("/api/v1/inference/admin/reload-model",        "inference (warm)"),
+        ("/api/v1/inference/admin/reload-base-model",   "inference (base EOD)"),
         ("/api/v1/simulation/admin/reload-simulation",  "simulation"),
     ]:
         try:
