@@ -1,4 +1,4 @@
-2026-04-28 00:23:29 | INFO | Training profile=warm_refresh validation=last_block_holdout rows=1650 symbols=62 dates=1
-2026-04-28 00:23:29 | INFO | Profile=warm_refresh result window=1d variant=warm_refresh mean_rmse=nan final_horizon_rmse=nan direction=nan device=cuda
-2026-04-28 00:23:29 | INFO | Disabling parallel horizon training on cuda to avoid device contention.
-2026-04-28 00:23:36 | INFO | Saved warm_refresh profile artifacts to /project/6065705/test_simulation/run_root/staging/warm_refresh_20260420_20260428T042329Z
+2026-04-28 01:45:44 | INFO | Training profile=base validation=expanding_cv rows=6212511 symbols=505 dates=502
+2026-04-28 01:45:44 | INFO | Profile=base result window=24m variant=best_fixed mean_rmse=nan final_horizon_rmse=nan direction=nan device=cuda
+2026-04-28 01:45:48 | INFO | Disabling parallel horizon training on cuda to avoid device contention.
+2026-04-28 02:18:01 | INFO | Saved base profile artifacts to /project/6065705/test_simulation/run_root/staging/base_20260420_20260428T054544Z

@@ -1,8 +1,8 @@
 {
-  "mode": "refresh",
+  "mode": "base",
   "status": "promoted",
-  "promoted_at": "2026-04-28T04:23:37Z",
-  "model_id": "warm_refresh_20260420_20260428T042329Z",
+  "promoted_at": "2026-04-28T06:18:03Z",
+  "model_id": "base_20260420_20260428T054544Z",
   "bundle_role": "current",
-  "source_candidate": "warm_refresh_20260420_20260428T042329Z"
+  "source_candidate": "base_20260420_20260428T054544Z"
 }

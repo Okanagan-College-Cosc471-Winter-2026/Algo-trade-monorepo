@@ -135,7 +135,10 @@ def _atomic_symlink(symlink: Path, target: Path) -> None:
     tmp = symlink.parent / (symlink.name + ".new")
     if tmp.exists() or tmp.is_symlink():
         tmp.unlink()
-    tmp.symlink_to(target.resolve())
+    # Use target.name (relative) so the symlink resolves correctly inside Docker,
+    # where the mount point differs from the host path. target.resolve() produces
+    # an absolute host path that is inaccessible inside the container.
+    tmp.symlink_to(target.name)
     tmp.rename(symlink)
 
 
@@ -275,15 +278,19 @@ def task_submit_warm_job(**ctx) -> None:
     from airflow.models import Variable
 
     sim_date    = ctx["ds"]
+    # execution_ts gives a unique key per 15-min slot (e.g. "2026-04-28T14:35:00+00:00")
+    execution_ts = ctx["ts_nodash"]
     remote_parq = ctx["ti"].xcom_pull(task_ids="sync_parquet_to_nibi", key="remote_parquet")
     warm_trees  = Variable.get("nibi_warm_trees", default_var="30")
 
-    job_record = REPO_ROOT / "logs" / f"nibi_warm_{sim_date}.json"
+    # Key job record by execution timestamp, not just date, so each 15-min slot
+    # submits its own Slurm job rather than reusing the first run's completed job.
+    job_record = REPO_ROOT / "logs" / f"nibi_warm_{execution_ts}.json"
     if job_record.exists():
         rec = json.loads(job_record.read_text())
         existing_id = rec.get("job_id")
-        if existing_id:
-            print(f"Warm job already submitted today: {existing_id} — reusing")
+        if existing_id and rec.get("status") != "completed":
+            print(f"Warm job already submitted for this slot: {existing_id} — reusing")
             ctx["ti"].xcom_push(key="job_id", value=existing_id)
             return
 

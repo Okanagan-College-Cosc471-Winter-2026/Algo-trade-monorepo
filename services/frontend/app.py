@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import math
 import os
-from datetime import UTC, datetime
+import re
+from datetime import UTC, datetime, timedelta, timezone
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -128,6 +129,48 @@ def ohlc_df(symbol: str, days: int) -> pd.DataFrame:
     return df.sort_values("date").reset_index(drop=True)
 
 
+def _prediction_meta(pred: dict) -> dict:
+    """
+    Parse a prediction response into human-readable label parts.
+
+    Returns a dict with:
+      cutoff     — "Apr 20"  (training data cutoff date)
+      trained_at — "10:45 PM PDT Apr 27"  (when base model was trained)
+      updated_at — "8:25 AM PDT"  (when warm refresh last ran, or trained_at for base)
+      version    — raw model_version string
+    """
+    version = pred.get("model_version", "")
+    cutoff = trained_at = updated_at = ""
+
+    # model_version format: "base_YYYYMMDD_YYYYMMDDTHHMMSSz"
+    m = re.match(r"[^_]+_(\d{8})_(\d{8}T\d{6}Z)", version)
+    if m:
+        try:
+            cutoff = datetime.strptime(m.group(1), "%Y%m%d").strftime("%b %-d, %Y")
+        except ValueError:
+            cutoff = m.group(1)
+        try:
+            ts_utc = datetime.strptime(m.group(2), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+            ts_pdt = ts_utc.astimezone(timezone(timedelta(hours=-7)))
+            trained_at = ts_pdt.strftime("%-I:%M %p PDT, %b %-d")
+        except ValueError:
+            trained_at = m.group(2)
+
+    # warm predictions may carry a refreshed_at timestamp
+    raw_refresh = pred.get("refreshed_at") or pred.get("warm_refreshed_at") or pred.get("as_of")
+    if raw_refresh:
+        try:
+            rt = datetime.fromisoformat(raw_refresh.replace("Z", "+00:00"))
+            rt_pdt = rt.astimezone(timezone(timedelta(hours=-7)))
+            updated_at = rt_pdt.strftime("%-I:%M %p PDT")
+        except Exception:
+            updated_at = raw_refresh[:16]
+    else:
+        updated_at = trained_at
+
+    return {"cutoff": cutoff, "trained_at": trained_at, "updated_at": updated_at, "version": version}
+
+
 # ── Chart builders ────────────────────────────────────────────────────────────
 
 def build_price_chart(df: pd.DataFrame, title: str, base_prediction: dict | None = None, warm_prediction: dict | None = None) -> go.Figure:
@@ -160,21 +203,31 @@ def build_price_chart(df: pd.DataFrame, title: str, base_prediction: dict | None
         path = base_prediction.get("path", [])
         bp_date = base_prediction.get("prediction_date", "")[:10]
         if path and bp_date:
+            meta = _prediction_meta(base_prediction)
+            trace_name = (
+                f"Base EOD Forecast  ·  trained thru {meta['cutoff']}"
+                f"  ·  model built {meta['trained_at']}"
+                f"  ·  fixed at market open"
+            )
             path_x = [f"{bp_date} {b['bar_time']}" for b in path]
             path_y = [b["pred_close"] for b in path]
             fig.add_trace(go.Scatter(
                 x=path_x, y=path_y,
-                mode="lines+markers", name="Base EOD Prediction",
+                mode="lines+markers", name=trace_name,
                 line={"color": "#f59e0b", "width": 2, "dash": "dot"},
                 marker={"size": 4, "color": "#f59e0b"},
             ))
             end_price = path_y[-1]
+            ret = base_prediction.get("predicted_full_day_return", 0.0)
+            direction = "▲" if base_prediction.get("predicted_direction") == "up" else "▼"
             fig.add_annotation(
                 x=path_x[-1], y=end_price,
-                text=f"Base EOD ${end_price:.2f}",
-                showarrow=True, arrowhead=2, ax=32, ay=-40,
-                bgcolor="rgba(245,158,11,0.12)", bordercolor="#f59e0b",
+                text=f"<b>Base EOD</b>  ${end_price:.2f}<br>"
+                     f"{direction} {ret:+.2f}%  ·  thru {meta['cutoff']}",
+                showarrow=True, arrowhead=2, ax=40, ay=-44,
+                bgcolor="rgba(245,158,11,0.13)", bordercolor="#f59e0b",
                 font={"size": 11, "color": "#92400e"},
+                align="left",
             )
 
     # Warm refresh prediction — blue dashed (updates every 15 min)
@@ -182,21 +235,31 @@ def build_price_chart(df: pd.DataFrame, title: str, base_prediction: dict | None
         path = warm_prediction.get("path", [])
         wp_date = warm_prediction.get("prediction_date", "")[:10]
         if path and wp_date:
+            meta = _prediction_meta(warm_prediction)
+            trace_name = (
+                f"Warm Intraday Forecast  ·  trained thru {meta['cutoff']}"
+                f"  ·  last refreshed {meta['updated_at']}"
+                f"  ·  updates every 15 min"
+            )
             path_x = [f"{wp_date} {b['bar_time']}" for b in path]
             path_y = [b["pred_close"] for b in path]
             fig.add_trace(go.Scatter(
                 x=path_x, y=path_y,
-                mode="lines+markers", name="Warm Refresh Prediction",
+                mode="lines+markers", name=trace_name,
                 line={"color": "#3b82f6", "width": 2, "dash": "dash"},
                 marker={"size": 4, "color": "#3b82f6"},
             ))
             end_price = path_y[-1]
+            ret = warm_prediction.get("predicted_full_day_return", 0.0)
+            direction = "▲" if warm_prediction.get("predicted_direction") == "up" else "▼"
             fig.add_annotation(
                 x=path_x[-1], y=end_price,
-                text=f"Warm ${end_price:.2f}",
-                showarrow=True, arrowhead=2, ax=32, ay=-20,
-                bgcolor="rgba(59,130,246,0.12)", bordercolor="#3b82f6",
+                text=f"<b>Warm Intraday</b>  ${end_price:.2f}<br>"
+                     f"{direction} {ret:+.2f}%  ·  refreshed {meta['updated_at']}",
+                showarrow=True, arrowhead=2, ax=40, ay=-22,
+                bgcolor="rgba(59,130,246,0.13)", bordercolor="#3b82f6",
                 font={"size": 11, "color": "#1e40af"},
+                align="left",
             )
 
     # Pin tick labels to first bar of each trading day — clean "Apr 7" style labels
@@ -414,21 +477,38 @@ def stocks_chart_fragment(symbol: str, days: int, detail: dict) -> None:
         pc1, pc2, pc3, pc4, pc5 = st.columns(5)
         pc1.metric("Current Price", f"${ref['current_price']:.2f}")
         if base_pred:
-            path = base_pred.get("path", [])
-            eod = path[-1]["pred_close"] if path else base_pred["current_price"]
-            full_ret = base_pred.get("predicted_full_day_return", 0.0)
+            path  = base_pred.get("path", [])
+            eod   = path[-1]["pred_close"] if path else base_pred["current_price"]
+            full_ret  = base_pred.get("predicted_full_day_return", 0.0)
             direction = base_pred.get("predicted_direction", "—")
-            chg = eod - ref["current_price"]
-            pc2.metric("Base EOD Target", f"${eod:.2f}",
-                       delta=f"{chg:+.2f} ({full_ret:+.2f}%)")
+            chg   = eod - ref["current_price"]
+            meta  = _prediction_meta(base_pred)
+            pc2.metric(
+                f"Base EOD · thru {meta['cutoff']}",
+                f"${eod:.2f}",
+                delta=f"{chg:+.2f} ({full_ret:+.2f}%)",
+                help=f"Morning base model trained on data through {meta['cutoff']}. "
+                     f"Built {meta['trained_at']}. Fixed at market open.",
+            )
+            pc3.metric("Direction (Base)", direction.upper(),
+                       help="Predicted close-to-close direction from base model")
         if warm_pred:
-            path = warm_pred.get("path", [])
-            eod = path[-1]["pred_close"] if path else warm_pred["current_price"]
+            path     = warm_pred.get("path", [])
+            eod      = path[-1]["pred_close"] if path else warm_pred["current_price"]
             full_ret = warm_pred.get("predicted_full_day_return", 0.0)
-            chg = eod - ref["current_price"]
-            pc4.metric("Warm Refresh Target", f"${eod:.2f}",
-                       delta=f"{chg:+.2f} ({full_ret:+.2f}%)")
-        pc5.metric("Model", (warm_pred or base_pred).get("model_version", "—"))
+            chg      = eod - ref["current_price"]
+            meta     = _prediction_meta(warm_pred)
+            pc4.metric(
+                f"Warm Intraday · {meta['updated_at']}",
+                f"${eod:.2f}",
+                delta=f"{chg:+.2f} ({full_ret:+.2f}%)",
+                help=f"Warm-refreshed model incorporating today's intraday bars. "
+                     f"Last refreshed {meta['updated_at']}. Updates every 15 min.",
+            )
+        active = warm_pred or base_pred
+        meta = _prediction_meta(active)
+        pc5.metric("Model Version", meta["version"] or "—",
+                   help=f"Training cutoff: {meta['cutoff']}  |  Built: {meta['trained_at']}")
         st.markdown("</div>", unsafe_allow_html=True)
 
     df = ohlc_df(symbol, days)
@@ -601,12 +681,25 @@ def render_stocks(stocks: list[dict], symbol: str, days: int) -> None:
 
     # Legend for prediction overlays
     st.markdown(
-        '<div style="display:flex;gap:20px;align-items:center;padding:6px 0 2px 0;font-size:0.82rem;color:#475569">'
-        '<span style="display:inline-block;width:28px;height:0;border-top:2px dotted #f59e0b;'
-        'vertical-align:middle;margin-right:5px"></span><span style="color:#92400e">Base EOD (static all day)</span>'
-        '&nbsp;&nbsp;&nbsp;'
-        '<span style="display:inline-block;width:28px;height:0;border-top:2px dashed #3b82f6;'
-        'vertical-align:middle;margin-right:5px"></span><span style="color:#1e40af">Warm Refresh (updates every 15 min)</span>'
+        '<div style="display:flex;flex-direction:column;gap:5px;padding:8px 12px;margin-bottom:4px;'
+        'background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:0.8rem;color:#475569">'
+
+        '<div style="display:flex;align-items:center;gap:10px">'
+        '<span style="display:inline-block;width:32px;height:0;border-top:2px dotted #f59e0b;flex-shrink:0"></span>'
+        '<span><strong style="color:#92400e">Base EOD Forecast</strong> — '
+        'trained on all data up to the prior session close · '
+        'generated once before market open · '
+        '<em>fixed all day, updates nightly</em></span>'
+        '</div>'
+
+        '<div style="display:flex;align-items:center;gap:10px">'
+        '<span style="display:inline-block;width:32px;height:0;border-top:2px dashed #3b82f6;flex-shrink:0"></span>'
+        '<span><strong style="color:#1e40af">Warm Intraday Forecast</strong> — '
+        'base model warm-refreshed with today\'s observed 15-min bars · '
+        'new trees added each window · '
+        '<em>updates every 15 min during market hours</em></span>'
+        '</div>'
+
         '</div>',
         unsafe_allow_html=True,
     )

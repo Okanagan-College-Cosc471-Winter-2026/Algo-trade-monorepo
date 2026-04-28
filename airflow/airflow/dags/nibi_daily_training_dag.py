@@ -464,12 +464,15 @@ def task_submit_job(**ctx):
     remote_parq  = ctx["ti"].xcom_pull(task_ids="sync_parquet_to_nibi", key="remote_parquet")
     job_record   = REPO_ROOT / "logs" / f"nibi_job_{sim_date}.json"
 
-    # If a job was already submitted today (e.g. DAG re-triggered after Task 8 failed),
+    # If a job was already submitted and is still in-flight (status != "completed"),
     # reuse the existing job_id rather than submitting a second job.
+    # Do NOT reuse a completed job: clean_nibi_run_root already wiped run_root,
+    # so reusing a completed ID would make the sensor return immediately and
+    # leave run_root empty, causing validate_artifacts to fail.
     if job_record.exists():
         rec = json.loads(job_record.read_text())
         existing_id = rec.get("job_id")
-        if existing_id:
+        if existing_id and rec.get("status") != "completed":
             print(f"Job already submitted today: {existing_id} — reusing (delete "
                   f"{job_record} to force re-submit)")
             ctx["ti"].xcom_push(key="job_id", value=existing_id)
