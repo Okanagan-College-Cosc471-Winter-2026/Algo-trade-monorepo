@@ -1,2 +1,0 @@
-window_months,variant,fold_strategy,feature_strategy,weight_strategy,rolling_train_months,mean_rmse,mean_mae,final_horizon_rmse,direction_accuracy,base_mean_rmse,mean_rmse_uplift,rmse_std,fit_sec,train_rows_mean,test_rows_mean,n_features,n_rows,device,direction_sort,train_profile,parallel_horizons
-24,best_fixed,direct_train,full,uniform,0,,,,,,,,,6396007.0,0.0,154,6396007,cuda,0.0,base,8

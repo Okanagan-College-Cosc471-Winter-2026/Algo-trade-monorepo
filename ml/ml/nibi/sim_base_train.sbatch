@@ -4,7 +4,7 @@
 #SBATCH --error=/home/%u/projects/def-youry/test_simulation/logs/sim_base_%j.err
 #SBATCH --time=03:00:00
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --gres=gpu:nvidia_h100_80gb_hbm3_3g.40gb:1
 #SBATCH --account=def-youry
 

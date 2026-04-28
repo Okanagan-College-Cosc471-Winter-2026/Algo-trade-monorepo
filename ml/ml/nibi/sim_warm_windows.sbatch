@@ -2,7 +2,7 @@
 #SBATCH --job-name=sim_warm_windows
 #SBATCH --output=/home/%u/projects/def-youry/test_simulation/logs/sim_warm_%j.out
 #SBATCH --error=/home/%u/projects/def-youry/test_simulation/logs/sim_warm_%j.err
-#SBATCH --time=01:00:00
+#SBATCH --time=06:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --gres=gpu:nvidia_h100_80gb_hbm3_1g.10gb:1

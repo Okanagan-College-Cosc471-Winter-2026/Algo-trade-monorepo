@@ -1375,7 +1375,7 @@ def build_sidebar(stocks: list[dict]) -> tuple[str, str, int, str]:
                 days = st.select_slider(
                     "History window",
                     options=[7, 30, 90, 180, 365, 730],
-                    value=st.session_state.get("stocks_days", 30),
+                    value=st.session_state.get("stocks_days", 7),
                     key="stocks_days",
                 )
 

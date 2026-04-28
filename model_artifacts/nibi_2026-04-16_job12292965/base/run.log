@@ -1,4 +1,0 @@
-2026-04-16 13:29:42 | INFO | Training profile=base validation=expanding_cv rows=6396007 symbols=505 dates=508
-2026-04-16 13:29:42 | INFO | Profile=base result window=24m variant=best_fixed mean_rmse=nan final_horizon_rmse=nan direction=nan device=cuda
-2026-04-16 13:29:45 | INFO | Disabling parallel horizon training on cuda to avoid device contention.
-2026-04-16 13:58:04 | INFO | Saved base profile artifacts to /project/6065705/test_simulation/run_root/staging/base_20260406_20260416T172942Z

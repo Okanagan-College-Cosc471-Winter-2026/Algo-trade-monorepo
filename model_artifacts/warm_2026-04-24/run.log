@@ -1,4 +1,0 @@
-2026-04-24 15:15:08 | INFO | Training profile=warm_refresh validation=last_block_holdout rows=1650 symbols=62 dates=1
-2026-04-24 15:15:08 | INFO | Profile=warm_refresh result window=1d variant=warm_refresh mean_rmse=nan final_horizon_rmse=nan direction=nan device=cuda
-2026-04-24 15:15:08 | INFO | Disabling parallel horizon training on cuda to avoid device contention.
-2026-04-24 15:15:11 | INFO | Saved warm_refresh profile artifacts to /project/6065705/test_simulation/run_root/staging/warm_refresh_20260420_20260424T191508Z
