@@ -144,6 +144,11 @@ def ops_airflow() -> dict[str, Any]:
     return _request("GET", "/ops/airflow")
 
 
+def ops_log_tail(log_name: str, lines: int = 80) -> dict[str, Any]:
+    """Last N lines of a named log file (pipeline_15m | warm_refresh | nibi_usage)."""
+    return _request("GET", f"/ops/logs/{log_name}", params={"lines": lines})
+
+
 def ops_nibi_relogin() -> dict[str, Any]:
     """
     Trigger auto_login.py on the backend to re-establish the SSH ControlMaster.

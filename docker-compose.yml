@@ -105,6 +105,7 @@ services:
     volumes:
       - ./datasets:/data/datasets
       - ./model_artifacts:/model_artifacts:ro
+      - ./logs:/app/logs:ro
     depends_on:
       db: {condition: service_healthy, restart: true}
       prestart: {condition: service_completed_successfully}

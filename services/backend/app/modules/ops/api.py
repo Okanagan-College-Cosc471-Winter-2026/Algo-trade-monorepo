@@ -43,7 +43,7 @@ REPO_ROOT      = Path(os.getenv("REPO_ROOT", "/data/projects/Algo-trade-monorepo
 # In Docker the host ./model_artifacts is mounted at /model_artifacts.
 # Override with ARTIFACTS_DIR env var to work both inside and outside Docker.
 ARTIFACTS_DIR  = Path(os.getenv("ARTIFACTS_DIR", "/model_artifacts"))
-LOGS_DIR       = REPO_ROOT / "logs"
+LOGS_DIR       = Path(os.getenv("LOG_DIR", "/app/logs"))
 NIBI_ALIAS     = "nibi"
 NIBI_USER      = os.getenv("NIBI_USER", "harshsaw")
 NIBI_SIM_DIR   = os.getenv("NIBI_SIM_DIR", "/home/harshsaw/projects/def-youry/test_simulation")
@@ -75,17 +75,47 @@ def _ssh(cmd: str, timeout: int = 15) -> tuple[int, str, str]:
 
 
 def _socket_alive() -> bool:
-    """Check if the SSH ControlMaster socket is active."""
-    import shutil
-    if not shutil.which("ssh"):
-        return False
+    """
+    Infer SSH ControlMaster liveness from two signals (ssh binary absent in container):
+      1. A recent successful nibi_intraday_warmrefresh or nibi_daily_warm_refresh DAG run
+         in the Airflow DB — if one succeeded within the last 35 min, SSH was alive then.
+      2. The ssh_alive.json heartbeat file written by the Airflow DAG on each health-check pass.
+    Falls back to False if neither signal is available.
+    """
+    # Signal 1: heartbeat file written by Airflow DAG
+    heartbeat = LOGS_DIR / "ssh_alive.json"
+    if heartbeat.exists():
+        try:
+            data = json.loads(heartbeat.read_text())
+            ts = dt.datetime.fromisoformat(data.get("last_alive_utc", ""))
+            if (dt.datetime.now(dt.timezone.utc) - ts).total_seconds() < 2400:  # 40 min
+                return True
+        except Exception:
+            pass
+
+    # Signal 2: recent successful Airflow run of either NIBI DAG
     try:
-        r = subprocess.run(
-            ["ssh", "-O", "check", NIBI_ALIAS],
-            capture_output=True, text=True, timeout=5,
+        import psycopg2
+        conn = psycopg2.connect(
+            host=os.getenv("POSTGRES_SERVER", "db"),
+            port=int(os.getenv("POSTGRES_PORT", "5432")),
+            dbname="airflow",
+            user=os.getenv("POSTGRES_USER", "appuser"),
+            password=os.getenv("POSTGRES_PASSWORD", ""),
+            connect_timeout=3,
         )
-        return r.returncode == 0
-    except FileNotFoundError:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT end_date FROM dag_run
+                WHERE dag_id IN ('nibi_intraday_warmrefresh','nibi_daily_warm_refresh')
+                  AND state = 'success'
+                  AND end_date >= NOW() - INTERVAL '35 minutes'
+                ORDER BY end_date DESC LIMIT 1
+            """)
+            row = cur.fetchone()
+        conn.close()
+        return row is not None
+    except Exception:
         return False
 
 
@@ -680,6 +710,37 @@ def _airflow_status() -> dict:
 def get_airflow_status() -> dict:
     """DAG statuses and recent run history from the Airflow metadata database."""
     return _airflow_status()
+
+
+@router.get("/logs/{log_name}")
+def get_log_tail(log_name: str, lines: int = 80) -> dict:
+    """
+    Return the last N lines of a known log file.
+    log_name: pipeline_15m | warm_refresh | nibi_usage
+    """
+    allowed = {
+        "pipeline_15m":  LOGS_DIR / "pipeline_15m.log",
+        "warm_refresh":  LOGS_DIR / "nibi_warm_refresh.log",
+        "nibi_usage":    LOGS_DIR / "nibi_usage_meter.jsonl",
+    }
+    path = allowed.get(log_name)
+    if path is None:
+        raise HTTPException(status_code=404, detail=f"Unknown log: {log_name}")
+    if not path.exists():
+        return {"log_name": log_name, "lines": [], "exists": False}
+    try:
+        # Efficient tail without reading whole file
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            chunk = min(size, lines * 200)
+            f.seek(max(0, size - chunk))
+            raw = f.read().decode("utf-8", errors="replace")
+        all_lines = raw.splitlines()
+        tail = all_lines[-lines:] if len(all_lines) > lines else all_lines
+        return {"log_name": log_name, "lines": tail, "exists": True, "path": str(path)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/data/freshness")

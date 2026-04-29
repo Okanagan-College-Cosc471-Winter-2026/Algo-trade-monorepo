@@ -19,6 +19,7 @@ from api import (
     list_stocks,
     ops_airflow,
     ops_data_freshness,
+    ops_log_tail,
     ops_nibi_exec,
     ops_nibi_relogin,
     ops_nibi_ssh,
@@ -1226,6 +1227,53 @@ def render_ops() -> None:
             })
     else:
         st.info("No pipeline logs available.")
+
+    st.divider()
+
+    # ══ 5b. Live Log Viewer ═══════════════════════════════════════
+    st.markdown("#### Live Logs")
+    st.caption("Last 60 lines — refresh page to update. Green = complete · amber = warning · red = error")
+
+    log_choice = st.radio(
+        "Log file",
+        ["Data Pipeline (pipeline_15m)", "NIBI Usage Meter (nibi_usage)"],
+        horizontal=True,
+        key="log_choice",
+    )
+    log_key = "pipeline_15m" if "pipeline_15m" in log_choice else "nibi_usage"
+
+    try:
+        log_data = ops_log_tail(log_key, lines=60)
+        log_lines = log_data.get("lines", [])
+        if not log_data.get("exists"):
+            st.info(f"Log file not found yet at: {log_data.get('path', log_key)}")
+        elif log_lines:
+            colored = []
+            for ln in log_lines:
+                ll = ln.lower()
+                if "[error]" in ll or "failed" in ll:
+                    col = "#f87171"
+                elif "[warning]" in ll or "warning" in ll or "warn" in ll:
+                    col = "#fbbf24"
+                elif "pipeline complete" in ll or "] ok" in ll or "success" in ll:
+                    col = "#4ade80"
+                elif "=====" in ln:
+                    col = "#60a5fa"
+                else:
+                    col = "#cbd5e1"
+                colored.append(f'<span style="color:{col}">{ln}</span>')
+            st.markdown(
+                '<div style="background:#0f172a;border-radius:8px;padding:12px 16px;'
+                'font-family:monospace;font-size:0.75rem;line-height:1.65;'
+                'max-height:420px;overflow-y:auto">'
+                + "<br>".join(colored)
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info("Log file is empty.")
+    except ApiError as exc:
+        st.warning(f"Could not load log: {exc}")
 
     st.divider()
 
