@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY services/collector/src/ /app/src/
 ENV PYTHONPATH=/app/src
 COPY docker/scheduler/crontab /etc/cron.d/algo-scheduler
-RUN chmod 0644 /etc/cron.d/algo-scheduler && crontab /etc/cron.d/algo-scheduler
+RUN chmod 0644 /etc/cron.d/algo-scheduler
 COPY docker/scheduler/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 CMD ["/entrypoint.sh"]

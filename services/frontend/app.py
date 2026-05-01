@@ -444,7 +444,7 @@ def build_sim_chart(
 
 # ── Page fragments (only these rerun on widget change inside them) ─────────────
 
-@st.fragment
+@st.fragment(run_every=900)
 def stocks_chart_fragment(symbol: str, days: int, detail: dict) -> None:
     """Chart + prediction toggle — reruns in isolation; no page scroll."""
     show_pred = st.toggle("Overlay predictions", value=False, key=f"pred_toggle_{symbol}")
@@ -520,7 +520,7 @@ def stocks_chart_fragment(symbol: str, days: int, detail: dict) -> None:
                             base_prediction=base_pred, warm_prediction=warm_pred)
     st.plotly_chart(fig, use_container_width=True)
 
-    info_tab, data_tab = st.tabs(["Company Info", "Raw Data"])
+    info_tab, forecast_tab, data_tab = st.tabs(["Company Info", "Real-time Forecast", "Raw Data"])
     with info_tab:
         ic1, ic2, ic3 = st.columns(3)
         ic1.markdown(f"**Company**  \n{detail.get('name') or symbol}")
@@ -532,6 +532,30 @@ def stocks_chart_fragment(symbol: str, days: int, detail: dict) -> None:
         ic3.markdown(f"**Latest Vol**  \n{int(df['volume'].iloc[-1]):,}")
         ic3.markdown(f"**Avg Vol (20)**  \n{int(df['volume'].tail(20).mean()):,}")
         ic3.markdown(f"**Bars loaded**  \n{len(df):,}")
+    
+    with forecast_tab:
+        try:
+            base_pred = predict_base(symbol)
+            warm_pred = predict(symbol)
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("**Base EOD Path**")
+                base_df = pd.DataFrame(base_pred.get("path", []))
+                if not base_df.empty:
+                    st.dataframe(base_df, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No path data available.")
+            with c2:
+                st.markdown("**Warm Intraday Path**")
+                warm_df = pd.DataFrame(warm_pred.get("path", []))
+                if not warm_df.empty:
+                    st.dataframe(warm_df, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No path data available.")
+        except Exception as exc:
+            st.error(f"Could not load detailed forecast: {exc}")
+
     with data_tab:
         raw = df[["date","open","high","low","close","volume"]].tail(200).sort_values("date", ascending=False)
         st.dataframe(raw, use_container_width=True, hide_index=True, height=380,
@@ -654,31 +678,79 @@ def render_overview(stocks: list[dict]) -> None:
             st.info("No sector metadata available.")
 
 
+@st.fragment(run_every=900)
+def render_realtime_metrics(symbol: str, days: int, detail: dict) -> None:
+    """Top metrics bar with real-time price and predictions — updates every 15 min."""
+    df = ohlc_df(symbol, days)
+    if df.empty:
+        st.warning("No OHLC data available for this symbol.")
+        return
+
+    latest = float(df["close"].iloc[-1])
+    prev   = float(df["close"].iloc[-2]) if len(df) > 1 else latest
+    day_chg = latest - prev
+    day_pct = (day_chg / prev * 100) if prev else 0.0
+
+    # Fetch predictions for the "Forecast" row
+    base_pred = None
+    warm_pred = None
+    try:
+        base_pred = predict_base(symbol)
+        warm_pred = predict(symbol)
+    except Exception:
+        pass
+
+    # Row 1: Market Context
+    st.markdown("#### Market Context")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Last Close", f"${latest:.2f}", delta=f"{day_chg:+.2f} ({day_pct:+.2f}%)")
+    
+    first = float(df["close"].iloc[0])
+    period_ret = ((latest / first) - 1) * 100 if first else 0.0
+    c2.metric(f"{days}d Return", f"{period_ret:+.2f}%")
+    
+    hi52 = float(df["high"].max())
+    lo52 = float(df["low"].min())
+    c3.metric(f"{days}d High / Low", f"${hi52:.2f} / ${lo52:.2f}")
+    
+    avg_vol = float(df["volume"].tail(20).mean())
+    c4.metric("Avg Vol (20-bar)", f"{int(avg_vol):,}")
+    c5.metric("Exchange", detail.get("exchange") or "—")
+
+    # Row 2: Real-time Forecast
+    st.markdown("#### Real-time Forecast (15m updates)")
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    
+    current = latest
+    if warm_pred:
+        current = warm_pred.get("current_price", latest)
+    fc1.metric("Live Price", f"${current:.2f}", help="Latest 15-minute bar close price from the feature store.")
+
+    if base_pred:
+        path = base_pred.get("path", [])
+        eod = path[-1]["pred_close"] if path else current
+        chg = ((eod / current) - 1) * 100
+        meta = _prediction_meta(base_pred)
+        fc2.metric("Base EOD Prediction", f"${eod:.2f}", delta=f"{chg:+.2f}%", 
+                   help=f"Morning base model trained thru {meta['cutoff']}.")
+    
+    if warm_pred:
+        path = warm_pred.get("path", [])
+        eod = path[-1]["pred_close"] if path else current
+        chg = ((eod / current) - 1) * 100
+        meta = _prediction_meta(warm_pred)
+        fc3.metric("Warm EOD Prediction", f"${eod:.2f}", delta=f"{chg:+.2f}%",
+                   help=f"Refreshed at {meta['updated_at']} with today's bars.")
+        fc4.metric("Prediction Window", meta["updated_at"], help="Last successful model refresh time.")
+
 def render_stocks(stocks: list[dict], symbol: str, days: int) -> None:
     if not stocks:
         st.info("No stocks available.")
         return
     detail = next((s for s in stocks if s["symbol"] == symbol), {})
 
-    # Top metrics bar
-    df = ohlc_df(symbol, days)
-    if not df.empty:
-        latest = float(df["close"].iloc[-1])
-        prev   = float(df["close"].iloc[-2]) if len(df) > 1 else latest
-        day_chg = latest - prev
-        day_pct = (day_chg / prev * 100) if prev else 0.0
-        first  = float(df["close"].iloc[0])
-        period_ret = ((latest / first) - 1) * 100 if first else 0.0
-        hi52 = float(df["high"].max())
-        lo52 = float(df["low"].min())
-        avg_vol = float(df["volume"].tail(20).mean())
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Last Close", f"${latest:.2f}",
-                  delta=f"{day_chg:+.2f} ({day_pct:+.2f}%)")
-        c2.metric(f"{days}d Return", f"{period_ret:+.2f}%")
-        c3.metric(f"{days}d High / Low", f"${hi52:.2f} / ${lo52:.2f}")
-        c4.metric("Avg Vol (20-bar)", f"{int(avg_vol):,}")
-        c5.metric("Exchange", detail.get("exchange") or "—")
+    # Top metrics bar (fragment-driven for auto-refresh)
+    render_realtime_metrics(symbol, days, detail)
 
     # Legend for prediction overlays
     st.markdown(

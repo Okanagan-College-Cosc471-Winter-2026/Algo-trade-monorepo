@@ -10,7 +10,7 @@ Intended Use:
     Safe to run multiple times; uses ON CONFLICT DO UPDATE to handle duplicates.
 
 Environment Variables:
-    API: FMP_API_KEY, FMP_API_URL, FMP_API_DELAY_SECONDS, SYMBOLS, MARKET_TZ
+    API: FMP_API_KEY, FMP_API_URL, FMP_API_DELAY_SECONDS, SYMBOLS, ALLOW_SYMBOL_SUBSET, MARKET_TZ
     Database: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
     Runtime: LOG_DIR, MARKET_OPEN, MARKET_CLOSE
 
@@ -55,15 +55,29 @@ from utils.collector_shared import (
     _validate_and_parse_row,
 )
 
+def _load_symbols_from_db(host: str, port: int, name: str, user: str, password: str) -> list[str]:
+    from sqlalchemy import text as sa_text
+    try:
+        engine = get_engine(host, port, name, user, password)
+        with engine.connect() as conn:
+            rows = conn.execute(
+                sa_text("SELECT symbol FROM market.stocks WHERE is_active = true ORDER BY symbol")
+            ).fetchall()
+        engine.dispose()
+        return [r[0] for r in rows]
+    except Exception as exc:
+        print(f"warning: could not load symbols from market.stocks: {exc}", file=sys.stderr)
+        return []
+
+
+def _allow_symbol_subset() -> bool:
+    return os.environ.get("ALLOW_SYMBOL_SUBSET", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def main():
     load_dotenv()
 
     api_key = os.environ.get("FMP_API_KEY", "")
-    symbols = [
-        s.strip()
-        for s in os.environ.get("SYMBOLS", "").split(",")
-        if s.strip()
-    ]
     market_tz = os.environ.get("MARKET_TZ", "America/New_York")
     market_open = os.environ.get("MARKET_OPEN", "04:00")
     market_close = os.environ.get("MARKET_CLOSE", "21:00")
@@ -73,6 +87,27 @@ def main():
     db_name = os.environ.get("DB_NAME", "")
     db_user = os.environ.get("DB_USER", "")
     db_password = os.environ.get("DB_PASSWORD", "")
+
+    env_symbols = [s.strip() for s in os.environ.get("SYMBOLS", "").split(",") if s.strip()]
+    if env_symbols and _allow_symbol_subset():
+        symbols = env_symbols
+        print(f"[info] Using {len(symbols)} symbols from SYMBOLS env override because ALLOW_SYMBOL_SUBSET is enabled")
+    else:
+        if env_symbols:
+            print(
+                "[warning] Ignoring SYMBOLS env override because ALLOW_SYMBOL_SUBSET is not enabled; "
+                "loading active symbols from market.stocks instead",
+                file=sys.stderr,
+            )
+        symbols = _load_symbols_from_db(db_host, db_port, db_name, db_user, db_password)
+        if not symbols and env_symbols:
+            symbols = env_symbols
+            print(
+                "[warning] Falling back to SYMBOLS env override because market.stocks lookup returned no symbols",
+                file=sys.stderr,
+            )
+        else:
+            print(f"[info] Loaded {len(symbols)} active symbols from market.stocks")
 
     tz = ZoneInfo(market_tz)
     now_local = dt.datetime.now(tz)
@@ -112,7 +147,7 @@ def main():
         sys.exit(0)
 
     if not symbols:
-        print("error: SYMBOLS is not set; configure it in .env before running", file=sys.stderr)
+        print("error: no symbols available — set SYMBOLS in .env or populate market.stocks", file=sys.stderr)
         sys.exit(1)
 
     if not api_key:

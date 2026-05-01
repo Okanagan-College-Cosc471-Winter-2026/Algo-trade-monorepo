@@ -15,7 +15,7 @@ datasets/*.csv
 backups/
 
 # Model artifacts
-model_artifacts/*/models/
+model_artifacts/
 
 # Large binary/archive types anywhere in repo
 *.tar.gz

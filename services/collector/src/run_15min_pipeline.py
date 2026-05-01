@@ -26,8 +26,10 @@ from __future__ import annotations
 import datetime as dt
 import json
 import logging
+import math
 import os
 import sys
+from dataclasses import dataclass
 from datetime import timezone
 from pathlib import Path
 
@@ -54,6 +56,17 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger("pipeline_15m")
+
+
+@dataclass(frozen=True)
+class LatestBarGate:
+    ok: bool
+    hard_fail: bool
+    message: str
+
+
+def _allow_symbol_subset() -> bool:
+    return os.environ.get("ALLOW_SYMBOL_SUBSET", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def build_engine():
@@ -134,7 +147,7 @@ def run_aggregate(engine, window_ts: dt.datetime) -> bool:
         return False
 
 
-def check_latest_5m_bar(engine, window_ts: dt.datetime) -> bool:
+def check_latest_5m_bar(engine, window_ts: dt.datetime) -> LatestBarGate:
     """
     Verify the latest 5-minute bar for a 15-minute window exists in core table.
 
@@ -144,26 +157,90 @@ def check_latest_5m_bar(engine, window_ts: dt.datetime) -> bool:
     latest_5m_ts = window_ts + dt.timedelta(minutes=10)
     try:
         with engine.connect() as conn:
-            bar_count = conn.execute(
-                text("SELECT COUNT(*) FROM core_dbms.market_data_5m WHERE ts = :bar_ts"),
+            symbol_count = conn.execute(
+                text(
+                    """
+                    SELECT COUNT(DISTINCT symbol)
+                    FROM core_dbms.market_data_5m
+                    WHERE ts = :bar_ts
+                      AND asset_type = 'stock'
+                    """
+                ),
                 {"bar_ts": latest_5m_ts},
             ).scalar()
-        count = int(bar_count or 0)
+            active_symbol_count = conn.execute(
+                text("SELECT COUNT(*) FROM market.stocks WHERE is_active = true")
+            ).scalar()
+        count = int(symbol_count or 0)
+        active_symbols = int(active_symbol_count or 0)
+        latest_bar_str = latest_5m_ts.strftime("%Y-%m-%d %H:%M:%S+00")
         if count <= 0:
-            logger.warning(
-                "[aggregate] missing latest bar ts=%s; waiting for closed window",
-                latest_5m_ts.strftime("%Y-%m-%d %H:%M:%S+00"),
+            message = f"window={window_ts.isoformat()} gate_reason=missing_latest_bar latest_bar={latest_bar_str}"
+            logger.warning("[aggregate] missing latest bar ts=%s; waiting for closed window", latest_bar_str)
+            return LatestBarGate(ok=False, hard_fail=False, message=message)
+
+        raw_ratio = os.environ.get("MIN_SYMBOL_COVERAGE_RATIO", "0.95")
+        try:
+            coverage_ratio = float(raw_ratio)
+        except ValueError:
+            coverage_ratio = 0.95
+            logger.warning("[aggregate] invalid MIN_SYMBOL_COVERAGE_RATIO=%r; defaulting to 0.95", raw_ratio)
+
+        if _allow_symbol_subset() or coverage_ratio <= 0 or active_symbols <= 0:
+            logger.info(
+                "[aggregate] latest bar check passed ts=%s symbols=%d active=%d subset_override=%s",
+                latest_bar_str,
+                count,
+                active_symbols,
+                _allow_symbol_subset(),
             )
-            return False
+            return LatestBarGate(
+                ok=True,
+                hard_fail=False,
+                message=(
+                    f"window={window_ts.isoformat()} latest_bar={latest_bar_str} "
+                    f"symbols={count} active={active_symbols}"
+                ),
+            )
+
+        required_symbols = math.ceil(active_symbols * coverage_ratio)
+        if count < required_symbols:
+            message = (
+                f"window={window_ts.isoformat()} gate_reason=insufficient_symbol_coverage "
+                f"latest_bar={latest_bar_str} symbols={count} active={active_symbols} required>={required_symbols}"
+            )
+            logger.error(
+                "[aggregate] insufficient symbol coverage ts=%s symbols=%d active=%d required>=%d ratio=%.3f",
+                latest_bar_str,
+                count,
+                active_symbols,
+                required_symbols,
+                coverage_ratio,
+            )
+            return LatestBarGate(ok=False, hard_fail=True, message=message)
+
         logger.info(
-            "[aggregate] latest bar check passed ts=%s rows=%d",
-            latest_5m_ts.strftime("%Y-%m-%d %H:%M:%S+00"),
+            "[aggregate] latest bar check passed ts=%s symbols=%d active=%d required>=%d",
+            latest_bar_str,
             count,
+            active_symbols,
+            required_symbols,
         )
-        return True
+        return LatestBarGate(
+            ok=True,
+            hard_fail=False,
+            message=(
+                f"window={window_ts.isoformat()} latest_bar={latest_bar_str} "
+                f"symbols={count} active={active_symbols} required>={required_symbols}"
+            ),
+        )
     except Exception as exc:
         logger.error("[aggregate] latest bar check failed: %s", exc, exc_info=True)
-        return False
+        return LatestBarGate(
+            ok=False,
+            hard_fail=True,
+            message=f"window={window_ts.isoformat()} gate_reason=latest_bar_check_failed error={exc}",
+        )
 
 
 def write_freshness_marker(window_ts: dt.datetime) -> None:
@@ -243,16 +320,16 @@ def main() -> int:
         return 1
 
     # ── Stage 3: Aggregate + feature engineering ──────────────────
-    latest_bar_ok = check_latest_5m_bar(engine, current_window)
-    if not latest_bar_ok:
+    latest_bar_gate = check_latest_5m_bar(engine, current_window)
+    if not latest_bar_gate.ok:
         log_pipeline(
             session_factory,
             "aggregate_15m",
-            "warning",
-            f"window={current_window.isoformat()} gate_reason=missing_latest_bar",
+            "failed" if latest_bar_gate.hard_fail else "warning",
+            latest_bar_gate.message,
         )
         engine.dispose()
-        return 0
+        return 1 if latest_bar_gate.hard_fail else 0
 
     agg_ok = run_aggregate(engine, current_window)
     log_pipeline(

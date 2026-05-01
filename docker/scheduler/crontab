@@ -1,8 +1,9 @@
-# Intraday data orchestration has moved to Airflow (`intraday_data_pipeline` DAG).
-# Keep these jobs disabled to avoid duplicate ownership/triggers.
-#*/15 * * * 1-5 root /usr/local/bin/python /app/src/run_15min_pipeline.py >> /app/logs/pipeline_15m.log 2>&1
-#5 0 * * 2-6 root /usr/local/bin/python /app/src/run_scheduled_operations.py >> /app/logs/pipeline.log 2>&1
+# Legacy fallback scheduler. Enable these jobs only when the Airflow intraday
+# DAGs are not running, otherwise the pipeline will double-trigger.
+*/15 8-23 * * 1-5 root /usr/local/bin/python /app/src/run_15min_pipeline.py >> /app/logs/pipeline_15m.log 2>&1
+*/15 0-1  * * 2-6 root /usr/local/bin/python /app/src/run_15min_pipeline.py >> /app/logs/pipeline_15m.log 2>&1
+5 0 * * 2-6 root /usr/local/bin/python /app/src/run_scheduled_operations.py >> /app/logs/pipeline.log 2>&1
 
-# NIBI training and warm-refresh are owned by Airflow (nibi_daily_training_dag,
-# nibi_intraday_warmrefresh_dag). Do NOT re-enable nibi_orchestrator.py here —
-# it would create duplicate Slurm job submissions.
+# NIBI training and warm-refresh remain Airflow-owned. Keep the legacy cron
+# disabled to avoid duplicate Slurm submissions and stale SSH failures.
+#0 10 * * 1-5 root /usr/local/bin/python /app/src/nibi_orchestrator.py >> /app/logs/nibi.log 2>&1

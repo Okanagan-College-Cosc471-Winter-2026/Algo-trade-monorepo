@@ -172,11 +172,13 @@ services:
       - DB_USER=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - FMP_API_KEY=${FMP_API_KEY}
-      - SYMBOLS=${SYMBOLS:-AAPL,AMD,AMZN,BA,MSFT,NVDA,GOOGL,TSLA}
       - MARKET_TZ=${MARKET_TZ:-America/New_York}
       - MARKET_OPEN=${MARKET_OPEN:-04:00}
       - MARKET_CLOSE=${MARKET_CLOSE:-21:00}
       - LOG_DIR=/app/logs
+    volumes:
+      - ./services/collector/src:/app/src:ro
+      - ./logs:/app/logs
 
   scheduler:
     build:
@@ -195,11 +197,13 @@ services:
       - DB_USER=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - FMP_API_KEY=${FMP_API_KEY}
-      - SYMBOLS=${SYMBOLS:-AAPL,AMD,AMZN,BA,MSFT,NVDA,GOOGL,TSLA}
       - MARKET_TZ=${MARKET_TZ:-America/New_York}
       - MARKET_OPEN=${MARKET_OPEN:-04:00}
       - MARKET_CLOSE=${MARKET_CLOSE:-21:00}
       - LOG_DIR=/app/logs
+    volumes:
+      - ./services/collector/src:/app/src:ro
+      - ./logs:/app/logs
 
   # ── Web terminal — re-authenticate NIBI MFA from the browser ──────────────
   # Access at http://localhost:7681

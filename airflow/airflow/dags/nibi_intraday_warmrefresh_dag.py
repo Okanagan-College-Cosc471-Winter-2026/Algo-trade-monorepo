@@ -15,8 +15,8 @@ Full pipeline (9 tasks):
                             (adds 30 warm trees to current_base boosters per step)
   5. poll_job_sensor      — Airflow Sensor pokes squeue every 2 min
   6. validate_step        — check all 26 step_XX/predictions/predictions.csv exist
-  7. rsync_artifacts_back — pull run_root/step_XX/ → model_artifacts/warm_YYYY-MM-DD/
-  8. promote_intraday     — atomic symlink: current_base → warm_YYYY-MM-DD bundle
+  7. rsync_artifacts_back — pull run_root/step_XX/ → model_artifacts/warm_YYYY-MM-DD_HHMM/
+  8. promote_intraday     — atomic symlink: current_base → warm_YYYY-MM-DD_HHMM bundle
   9. reload_backend       — POST /api/v1/inference/admin/reload-model (non-fatal)
 
 SSH note:
@@ -25,15 +25,15 @@ SSH note:
 
 Artifact layout after promotion:
   model_artifacts/
-    current_base               → warm_YYYY-MM-DD/   (symlink, atomic)
-    warm_YYYY-MM-DD/
+    current_base               → warm_YYYY-MM-DD_HHMM/   (symlink, atomic)
+    warm_YYYY-MM-DD_HHMM/     (one dir per 15-min slot, all retained)
       metadata.json
       feature_names.json
       models/
         model_manifest.json
         horizon_00.json … horizon_25.json
-    current_simulation         → simulation_YYYY-MM-DD/   (for replay UI)
-    simulation_YYYY-MM-DD/
+    current_simulation         → simulation_YYYY-MM-DD_HHMM/   (for replay UI)
+    simulation_YYYY-MM-DD_HHMM/
       step_00/ … step_25/
         predictions/predictions.csv
         metadata.json
@@ -44,7 +44,6 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
-import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -215,15 +214,18 @@ def task_export_snapshot(**ctx) -> None:
                 SELECT *
                 FROM ml.market_data_15m
                 WHERE trade_date >= (
-                    SELECT trade_date
-                    FROM ml.market_data_15m
-                    ORDER BY trade_date DESC
-                    LIMIT 1 OFFSET :offset
+                    SELECT MIN(trade_date)
+                    FROM (
+                        SELECT DISTINCT trade_date
+                        FROM ml.market_data_15m
+                        ORDER BY trade_date DESC
+                        LIMIT :days
+                    ) recent_days
                 )
                 ORDER BY symbol, window_ts
             """),
             conn,
-            params={"offset": SNAPSHOT_TRADING_DAYS - 1},
+            params={"days": SNAPSHOT_TRADING_DAYS},
         )
     engine.dispose()
 
@@ -409,13 +411,21 @@ def task_rsync_artifacts_back(**ctx) -> None:
     """
     Pull run_root/step_XX/ and the warm bundle back to the VPS.
 
-    Two destinations:
-      - warm_YYYY-MM-DD/   → backend-serving bundle (current_base target)
-      - simulation_YYYY-MM-DD/ → replay UI bundle (current_simulation target)
+    Two destinations per 15-min slot (HHMM = ET wall-clock of the logical run):
+      - warm_YYYY-MM-DD_HHMM/        → backend-serving bundle (current_base target)
+      - simulation_YYYY-MM-DD_HHMM/  → replay UI bundle (current_simulation target)
+
+    Each slot gets its own directory so the full intraday history is preserved
+    for simulation replay.
     """
-    sim_date  = ctx["ds"]
-    warm_dest = ARTIFACTS_DIR / f"warm_{sim_date}"
-    sim_dest  = ARTIFACTS_DIR / f"simulation_{sim_date}"
+    sim_date = ctx["ds"]
+    # Derive the ET slot label from the logical execution time so each
+    # 15-min cycle gets a unique, human-readable directory name.
+    logical_dt_utc = ctx["data_interval_start"]
+    slot_hhmm = logical_dt_utc.astimezone(MARKET_TZ).strftime("%H%M")
+
+    warm_dest = ARTIFACTS_DIR / f"warm_{sim_date}_{slot_hhmm}"
+    sim_dest  = ARTIFACTS_DIR / f"simulation_{sim_date}_{slot_hhmm}"
 
     warm_dest.mkdir(parents=True, exist_ok=True)
     sim_dest.mkdir(parents=True, exist_ok=True)
@@ -471,11 +481,11 @@ def task_rsync_artifacts_back(**ctx) -> None:
 # ══════════════════════════════════════════════════════════════════════════════
 def task_promote_intraday(**ctx) -> None:
     """
-    Atomic symlink swap: current_base → warm_YYYY-MM-DD/
+    Atomic symlink swap: current_base → warm_YYYY-MM-DD_HHMM/
 
     Only promotes if the bundle contains models/model_manifest.json.
     Also promotes current_simulation if all 26 prediction CSVs are present.
-    Cleans up artifact dirs older than 7 days.
+    All artifact dirs are retained (no cleanup — VM has ample space).
     """
     warm_dir = Path(ctx["ti"].xcom_pull(task_ids="rsync_artifacts_back", key="warm_artifact_dir"))
     sim_dir  = Path(ctx["ti"].xcom_pull(task_ids="rsync_artifacts_back", key="sim_artifact_dir"))
@@ -500,20 +510,8 @@ def task_promote_intraday(**ctx) -> None:
     else:
         print(f"WARNING: only {n_with_preds}/26 step prediction CSVs — skipping current_simulation update")
 
-    # Cleanup: remove warm_* and simulation_* dirs older than 7 days
-    cutoff = dt.datetime.utcnow() - dt.timedelta(days=7)
-    for pattern, fmt in [
-        ("warm_????-??-??", "warm_%Y-%m-%d"),
-        ("simulation_????-??-??", "simulation_%Y-%m-%d"),
-    ]:
-        for old_dir in sorted(ARTIFACTS_DIR.glob(pattern)):
-            try:
-                dir_date = dt.datetime.strptime(old_dir.name, fmt)
-                if dir_date < cutoff and old_dir not in (warm_dir, sim_dir):
-                    shutil.rmtree(old_dir)
-                    print(f"Cleaned up old artifact: {old_dir.name}")
-            except (ValueError, OSError):
-                pass
+    # Artifacts are never deleted — the VM has ample space and all slots are
+    # retained for simulation replay.
 
 
 # ══════════════════════════════════════════════════════════════════════════════

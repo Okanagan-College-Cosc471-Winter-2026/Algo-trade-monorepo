@@ -298,9 +298,24 @@ def main() -> None:
         print(f"  {ok}  total: {step_info['total_sec']:.1f}s\n")
 
     # ── Done ───────────────────────────────────────────────────────
-    progress["status"] = "success"
+    error_steps = [s for s in progress["steps"] if str(s.get("status", "")).startswith("error")]
+    ok_steps = [s for s in progress["steps"] if s.get("status") == "ok"]
+
     progress["finished_at"] = dt.datetime.utcnow().isoformat()
+    progress["status"] = "failed" if error_steps else "success"
     write_progress(run_root, progress)
+
+    print(f"\n{'='*60}")
+    print(
+        f" Simulation {'failed' if error_steps else 'complete'}"
+        f" — ok={len(ok_steps)} error={len(error_steps)} total={len(progress['steps'])}"
+    )
+    print(f" Artifacts: {run_root}/step_XX/")
+    print(f" Progress : {run_root}/simulation_progress.json")
+    print(f"{'='*60}")
+
+    if error_steps:
+        raise SystemExit(1)
 
     sentinel = run_root / "SIMULATION_DONE"
     sentinel.write_text(
@@ -308,12 +323,6 @@ def main() -> None:
         f"steps={len(progress['steps'])}\n"
         f"status=success\n"
     )
-
-    print(f"\n{'='*60}")
-    print(f" Simulation complete — {len(progress['steps'])} windows")
-    print(f" Artifacts: {run_root}/step_XX/")
-    print(f" Progress : {run_root}/simulation_progress.json")
-    print(f"{'='*60}")
 
 
 if __name__ == "__main__":

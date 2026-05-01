@@ -28,11 +28,14 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import math
 import os
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -58,6 +61,7 @@ REPO_ROOT      = Path("/data/projects/Algo-trade-monorepo")
 DATASETS_DIR   = REPO_ROOT / "datasets"
 ARTIFACTS_DIR  = REPO_ROOT / "model_artifacts"
 ML_SRC         = REPO_ROOT / "ml" / "ml"
+COLLECTOR_SRC  = REPO_ROOT / "services" / "collector" / "src"
 
 NIBI_DATA_DIR   = f"{NIBI_SIM_DIR}/data"
 NIBI_RUN_ROOT   = f"{NIBI_SIM_DIR}/run_root"
@@ -87,6 +91,14 @@ REQUIRED_LIBS = [
     "xgboost", "seaborn", "pandas", "numpy",
     "sklearn", "matplotlib", "scipy", "joblib",
 ]
+
+TRAINING_COVERAGE_LOOKBACK_TRADING_DAYS = int(os.getenv("TRAINING_COVERAGE_LOOKBACK_TRADING_DAYS", "5"))
+TRAINING_COVERAGE_REFERENCE_CALENDAR_DAYS = int(os.getenv("TRAINING_COVERAGE_REFERENCE_CALENDAR_DAYS", "45"))
+TRAINING_COVERAGE_MIN_SYMBOL_RATIO = float(os.getenv("TRAINING_COVERAGE_MIN_SYMBOL_RATIO", "0.98"))
+TRAINING_RTH_BAR_COUNT = 26
+TRAINING_BACKFILL_OPEN_ET = dt.time(4, 0)
+TRAINING_BACKFILL_CLOSE_ET = dt.time(20, 0)
+TRAINING_MARKET_TZ = ZoneInfo("America/New_York")
 
 # Usage meter — append one JSON record per run to track GPU allocation hours.
 USAGE_LOG = REPO_ROOT / "logs" / "nibi_usage_meter.jsonl"
@@ -221,6 +233,297 @@ def task_clean_nibi_run_root(**ctx):
     print(f"Cleaned: {NIBI_RUN_ROOT}")
 
 
+def _expected_recent_trading_dates(end_date: dt.date, limit: int) -> list[dt.date]:
+    import exchange_calendars as xcals
+
+    xnys = xcals.get_calendar("XNYS")
+    schedule = xnys.schedule.loc[: str(end_date)].tail(limit)
+    return [ts.date() for ts in schedule.index]
+
+
+def _load_training_coverage(conn, expected_dates: list[dt.date]) -> tuple[int, list[str], list[dict[str, int | dt.date]]]:
+    if not expected_dates:
+        return 0, [], []
+
+    reference_start = expected_dates[0] - dt.timedelta(days=TRAINING_COVERAGE_REFERENCE_CALENDAR_DAYS)
+    reference_end = expected_dates[-1]
+
+    regular_hours_filter = """
+        (window_ts AT TIME ZONE 'America/New_York')::time >= TIME '09:30'
+        AND (window_ts AT TIME ZONE 'America/New_York')::time < TIME '16:00'
+    """
+
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+                WITH counts AS (
+                    SELECT trade_date,
+                           symbol,
+                           COUNT(*) FILTER (WHERE {regular_hours_filter}) AS bars_rth
+                    FROM ml.market_data_15m
+                    WHERE trade_date BETWEEN %s AND %s
+                    GROUP BY 1,2
+                ),
+                day_totals AS (
+                    SELECT trade_date,
+                           COUNT(*) FILTER (WHERE bars_rth >= %s) AS complete_symbols
+                    FROM counts
+                    GROUP BY 1
+                )
+                SELECT COALESCE(MAX(complete_symbols), 0)
+                FROM day_totals
+            """,
+            (reference_start, reference_end, TRAINING_RTH_BAR_COUNT),
+        )
+        reference_symbol_count = int(cur.fetchone()[0] or 0)
+
+        cur.execute(
+            f"""
+                WITH counts AS (
+                    SELECT trade_date,
+                           symbol,
+                           COUNT(*) FILTER (WHERE {regular_hours_filter}) AS bars_rth
+                    FROM ml.market_data_15m
+                    WHERE trade_date BETWEEN %s AND %s
+                    GROUP BY 1,2
+                )
+                SELECT DISTINCT symbol
+                FROM counts
+                WHERE bars_rth >= %s
+                ORDER BY symbol
+            """,
+            (reference_start, reference_end, TRAINING_RTH_BAR_COUNT),
+        )
+        reference_symbols = [row[0] for row in cur.fetchall()]
+
+        if not reference_symbols:
+            cur.execute("SELECT symbol FROM market.stocks WHERE is_active = true ORDER BY symbol")
+            reference_symbols = [row[0] for row in cur.fetchall()]
+
+        cur.execute(
+            f"""
+                WITH expected_days AS (
+                    SELECT unnest(%s::date[]) AS trade_date
+                ),
+                counts AS (
+                    SELECT trade_date,
+                           symbol,
+                           COUNT(*) FILTER (WHERE {regular_hours_filter}) AS bars_rth
+                    FROM ml.market_data_15m
+                    WHERE trade_date = ANY(%s::date[])
+                    GROUP BY 1,2
+                )
+                SELECT d.trade_date,
+                       COALESCE(COUNT(c.symbol) FILTER (WHERE c.bars_rth > 0), 0) AS present_symbols,
+                       COALESCE(COUNT(c.symbol) FILTER (WHERE c.bars_rth >= %s), 0) AS complete_symbols
+                FROM expected_days d
+                LEFT JOIN counts c
+                  ON c.trade_date = d.trade_date
+                GROUP BY d.trade_date
+                ORDER BY d.trade_date
+            """,
+            (expected_dates, expected_dates, TRAINING_RTH_BAR_COUNT),
+        )
+        coverage_rows = [
+            {
+                "trade_date": row[0],
+                "present_symbols": int(row[1] or 0),
+                "complete_symbols": int(row[2] or 0),
+            }
+            for row in cur.fetchall()
+        ]
+
+    return reference_symbol_count, reference_symbols, coverage_rows
+
+
+def _iter_backfill_slots_utc(trade_dates: list[dt.date]):
+    for trade_date in sorted(set(trade_dates)):
+        slot = dt.datetime.combine(
+            trade_date,
+            TRAINING_BACKFILL_OPEN_ET,
+            tzinfo=TRAINING_MARKET_TZ,
+        ).astimezone(dt.timezone.utc)
+        close_utc = dt.datetime.combine(
+            trade_date,
+            TRAINING_BACKFILL_CLOSE_ET,
+            tzinfo=TRAINING_MARKET_TZ,
+        ).astimezone(dt.timezone.utc)
+        while slot < close_utc:
+            yield trade_date, slot
+            slot += dt.timedelta(minutes=15)
+
+
+def _collector_import_path() -> None:
+    collector_src = str(COLLECTOR_SRC)
+    if collector_src not in sys.path:
+        sys.path.insert(0, collector_src)
+
+
+def _export_staging_backfill_to_core() -> dict[str, int]:
+    _collector_import_path()
+
+    from model.orm_db import get_engine as collector_get_engine, get_session_factory
+    from utils.scheduled_pipeline import export_staging_to_core
+
+    engine = collector_get_engine(DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS)
+    try:
+        session_factory = get_session_factory(engine)
+        with session_factory() as session:
+            summary = export_staging_to_core(session)
+            session.commit()
+        return {
+            "processed_rows": int(summary.processed_rows),
+            "exported_rows": int(summary.exported_rows),
+            "duplicate_rows": int(summary.duplicate_rows),
+            "quality_error_rows": int(summary.quality_error_rows),
+        }
+    finally:
+        engine.dispose()
+
+
+def task_ensure_training_db_coverage(**ctx):
+    import psycopg2
+    from sqlalchemy import create_engine, text
+
+    sim_date = dt.date.fromisoformat(ctx["ds"])
+    expected_dates = _expected_recent_trading_dates(sim_date, TRAINING_COVERAGE_LOOKBACK_TRADING_DAYS)
+    if not expected_dates:
+        raise AirflowException(f"No expected trading dates found for sim_date={sim_date}")
+
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS,
+        connect_timeout=10,
+    )
+    try:
+        reference_symbol_count, reference_symbols, coverage_rows = _load_training_coverage(conn, expected_dates)
+    finally:
+        conn.close()
+
+    if reference_symbol_count <= 0:
+        raise AirflowException("Could not determine a reference symbol universe from ml.market_data_15m")
+
+    required_symbols = math.ceil(reference_symbol_count * TRAINING_COVERAGE_MIN_SYMBOL_RATIO)
+    gap_dates: list[dt.date] = []
+
+    print(
+        f"Training DB coverage check: expected_dates={expected_dates[0]}..{expected_dates[-1]} "
+        f"reference_symbols={reference_symbol_count} required_complete>={required_symbols}"
+    )
+    for row in coverage_rows:
+        trade_date = row["trade_date"]
+        present_symbols = int(row["present_symbols"])
+        complete_symbols = int(row["complete_symbols"])
+        print(
+            f"  {trade_date}: present_symbols={present_symbols} "
+            f"complete_regular_session_symbols={complete_symbols}"
+        )
+        if complete_symbols < required_symbols:
+            gap_dates.append(trade_date)
+
+    if not gap_dates:
+        print("Training DB coverage OK — no backfill required.")
+        ctx["ti"].xcom_push(key="backfill_performed", value=False)
+        ctx["ti"].xcom_push(key="gap_dates", value=[])
+        return
+
+    if not reference_symbols:
+        raise AirflowException("Coverage preflight found gaps but could not resolve a reference symbol list.")
+
+    gap_dates = sorted(set(gap_dates))
+    print(f"Coverage gaps detected for trade dates: {', '.join(d.isoformat() for d in gap_dates)}")
+
+    fetch_env = os.environ.copy()
+    fetch_env["PYTHONPATH"] = str(COLLECTOR_SRC)
+    fetch_env.setdefault("DB_HOST", DB_HOST)
+    fetch_env.setdefault("DB_PORT", str(DB_PORT))
+    fetch_env.setdefault("DB_NAME", DB_NAME)
+    fetch_env.setdefault("DB_USER", DB_USER)
+    fetch_env.setdefault("DB_PASSWORD", DB_PASS)
+
+    fetch_cmd = [
+        sys.executable,
+        str(COLLECTOR_SRC / "gather_past_data.py"),
+        "--from-date",
+        gap_dates[0].isoformat(),
+        "--to-date",
+        gap_dates[-1].isoformat(),
+        "--symbols",
+        ",".join(reference_symbols),
+    ]
+    print(
+        f"Running historical backfill for {len(reference_symbols)} symbols "
+        f"from {gap_dates[0]} to {gap_dates[-1]} ..."
+    )
+    fetch_proc = subprocess.run(
+        fetch_cmd,
+        cwd=str(COLLECTOR_SRC),
+        env=fetch_env,
+        capture_output=True,
+        text=True,
+        timeout=7200,
+    )
+    if fetch_proc.returncode != 0:
+        raise AirflowException(
+            "Historical gap backfill failed.\n"
+            f"stdout:\n{fetch_proc.stdout[-4000:]}\n"
+            f"stderr:\n{fetch_proc.stderr[-4000:]}"
+        )
+    print(fetch_proc.stdout[-2000:] or "Historical backfill completed.")
+
+    export_summary = _export_staging_backfill_to_core()
+    print(
+        "Backfill export summary: "
+        f"processed={export_summary['processed_rows']} "
+        f"exported={export_summary['exported_rows']} "
+        f"duplicates={export_summary['duplicate_rows']} "
+        f"quality_errors={export_summary['quality_error_rows']}"
+    )
+
+    engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+    try:
+        slot_count = 0
+        with engine.begin() as sql_conn:
+            for trade_date, slot in _iter_backfill_slots_utc(gap_dates):
+                sql_conn.execute(text("CALL dw.process_15min_window(:window_ts)"), {"window_ts": slot})
+                slot_count += 1
+        print(f"Re-aggregated {slot_count} 15-minute windows across {len(gap_dates)} trade dates.")
+    finally:
+        engine.dispose()
+
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS,
+        connect_timeout=10,
+    )
+    try:
+        refreshed_reference_count, _, refreshed_rows = _load_training_coverage(conn, expected_dates)
+    finally:
+        conn.close()
+
+    refreshed_required = math.ceil(refreshed_reference_count * TRAINING_COVERAGE_MIN_SYMBOL_RATIO)
+    remaining_gaps = [
+        row["trade_date"]
+        for row in refreshed_rows
+        if int(row["complete_symbols"]) < refreshed_required
+    ]
+    if remaining_gaps:
+        raise AirflowException(
+            "Training DB coverage is still incomplete after backfill for trade dates: "
+            + ", ".join(d.isoformat() for d in remaining_gaps)
+        )
+
+    print("Training DB coverage repaired successfully.")
+    ctx["ti"].xcom_push(key="backfill_performed", value=True)
+    ctx["ti"].xcom_push(key="gap_dates", value=[d.isoformat() for d in gap_dates])
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TASK 2 — Export Parquet
 # ══════════════════════════════════════════════════════════════════════════════
@@ -252,12 +555,21 @@ def task_export_parquet(**ctx):
     out_path = DATASETS_DIR / f"snapshot_{sim_date}.parquet"
     tmp_path = out_path.with_suffix(".parquet.tmp")
     DATASETS_DIR.mkdir(parents=True, exist_ok=True)
+    backfill_performed = bool(
+        ctx["ti"].xcom_pull(task_ids="ensure_training_db_coverage", key="backfill_performed")
+    )
 
     if out_path.exists():
-        mb = out_path.stat().st_size / 1e6
-        print(f"Parquet already exists ({mb:.1f} MB) — skipping export")
-        ctx["ti"].xcom_push(key="parquet_path", value=str(out_path))
-        return
+        if backfill_performed:
+            print("DB backfill repaired training data — rebuilding existing parquet snapshot.")
+            out_path.unlink()
+            if tmp_path.exists():
+                tmp_path.unlink()
+        else:
+            mb = out_path.stat().st_size / 1e6
+            print(f"Parquet already exists ({mb:.1f} MB) — skipping export")
+            ctx["ti"].xcom_push(key="parquet_path", value=str(out_path))
+            return
 
     engine = create_engine(
         f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -386,6 +698,11 @@ def task_sync_parquet(**ctx):
 # ══════════════════════════════════════════════════════════════════════════════
 def task_sync_base_model(**ctx):
     from airflow.models import Variable
+    skip_base = Variable.get("nibi_skip_base", default_var="false").lower() == "true"
+    if not skip_base:
+        print("nibi_skip_base=false — base training is enabled, so sync_base_model is not required.")
+        return
+
     base_dir = Path(Variable.get("nibi_base_model_dir", default_var=_BASE_MODEL_DIR_DEFAULT))
 
     if not base_dir.exists():
@@ -479,11 +796,11 @@ def task_submit_job(**ctx):
             return
 
     # skip_base=True  → reuse existing base model (fast, ~9 min)
-    # skip_base=False → train new base model first (slow, ~60 min)
-    # Controlled by Airflow Variable "nibi_skip_base" (default True).
-    # Override via UI: Admin → Variables → nibi_skip_base = false
+    # skip_base=False → train new base model first (slower, but keeps current_base fresh)
+    # Controlled by Airflow Variable "nibi_skip_base" (default False).
+    # Override via UI: Admin → Variables → nibi_skip_base = true
     from airflow.models import Variable
-    skip_base = Variable.get("nibi_skip_base", default_var="true").lower() == "true"
+    skip_base = Variable.get("nibi_skip_base", default_var="false").lower() == "true"
 
     cmd = (
         f"sbatch {NIBI_SBATCH} "
@@ -802,6 +1119,12 @@ def task_rsync_artifacts_back(**ctx):
     sim_date  = ctx["ds"]
     warm_dest = ARTIFACTS_DIR / f"warm_{sim_date}"
     sim_dest  = ARTIFACTS_DIR / f"simulation_{sim_date}"
+
+    if warm_dest.exists():
+        shutil.rmtree(warm_dest)
+    if sim_dest.exists():
+        shutil.rmtree(sim_dest)
+
     warm_dest.mkdir(parents=True, exist_ok=True)
     sim_dest.mkdir(parents=True, exist_ok=True)
 
@@ -1035,6 +1358,13 @@ with DAG(
         retries=0,          # missing libs won't fix themselves on retry
     )
 
+    t1c_db = PythonOperator(
+        task_id="ensure_training_db_coverage",
+        python_callable=task_ensure_training_db_coverage,
+        execution_timeout=dt.timedelta(minutes=60),
+        retries=0,
+    )
+
     t2_export = PythonOperator(
         task_id="export_parquet",
         python_callable=task_export_parquet,
@@ -1110,17 +1440,19 @@ with DAG(
 
     # ── Dependency chain ─────────────────────────────────────────
     #
-    # After health check, four tasks run in parallel:
-    #   t2 export parquet, t3 sync code, t5 sync base model, t1b check libs
+    # After health check, DB coverage repair (t1c), code sync (t3), base-model
+    # sync (t5), and library checks (t1b) can run in parallel. Export parquet
+    # waits for the DB coverage gate so it snapshots repaired data if needed.
     # All must pass before we SCP the parquet (t4).
     # After all syncs land, clean run_root (t5b) then submit (t6).
     #
-    #   t1 ──┬── t2 ──────────┐
+    #   t1 ──┬── t1c ── t2 ───┐
     #        ├── t3 ──────────┤
     #        ├── t5 ──────────┤
     #        └── t1b (libs) ──┘
     #                          └── t4 ── t5b (clean) ── t6 ── t7 ── t8 ── t9 ── t10 ── t11
 
-    t1_health >> [t2_export, t3_code, t5_model, t1b_libs]
+    t1_health >> [t1c_db, t3_code, t5_model, t1b_libs]
+    t1c_db >> t2_export
     [t2_export, t3_code, t5_model, t1b_libs] >> t4_parquet
     t4_parquet >> t5b_clean >> t6_submit >> t7_poll >> t8_validate >> t9_rsync >> t10_promote >> t11_reload
