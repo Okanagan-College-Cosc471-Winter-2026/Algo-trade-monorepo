@@ -6184,32 +6184,32 @@
       "file_type": "rationale",
       "source_file": "airflow/airflow/dags/nibi_daily_training_dag.py",
       "source_location": "L109",
-      "id": "nibi_daily_training_dag_rationale_109",
-      "community": 9
+      "community": 9,
+      "id": "nibi_daily_training_dag_rationale_109"
     },
     {
       "label": "Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces",
       "file_type": "rationale",
       "source_file": "airflow/airflow/dags/nibi_daily_training_dag.py",
       "source_location": "L117",
-      "id": "nibi_daily_training_dag_rationale_117",
-      "community": 9
+      "community": 9,
+      "id": "nibi_daily_training_dag_rationale_117"
     },
     {
       "label": "Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval",
       "file_type": "rationale",
       "source_file": "airflow/airflow/dags/nibi_daily_training_dag.py",
       "source_location": "L898",
-      "id": "nibi_daily_training_dag_rationale_898",
-      "community": 9
+      "community": 9,
+      "id": "nibi_daily_training_dag_rationale_898"
     },
     {
       "label": "Atomically update a symlink via Linux rename() \u2014 uses relative path for Docker c",
       "file_type": "rationale",
       "source_file": "airflow/airflow/dags/nibi_daily_training_dag.py",
       "source_location": "L1219",
-      "id": "nibi_daily_training_dag_rationale_1219",
-      "community": 9
+      "community": 9,
+      "id": "nibi_daily_training_dag_rationale_1219"
     },
     {
       "label": "intraday_data_pipeline_dag.py",
@@ -8089,7 +8089,7 @@
       "source_file": "services/backend/app/modules/market/models.py",
       "source_location": "L1",
       "id": "services_backend_app_modules_market_models_py",
-      "community": 18
+      "community": 20
     },
     {
       "label": "Stock",
@@ -8097,7 +8097,7 @@
       "source_file": "services/backend/app/modules/market/models.py",
       "source_location": "L19",
       "id": "models_stock",
-      "community": 18
+      "community": 20
     },
     {
       "label": "Base",
@@ -8105,7 +8105,7 @@
       "source_file": "",
       "source_location": "",
       "id": "base",
-      "community": 18
+      "community": 4
     },
     {
       "label": "DailyPrice",
@@ -8113,14 +8113,14 @@
       "source_file": "services/backend/app/modules/market/models.py",
       "source_location": "L40",
       "id": "models_dailyprice",
-      "community": 18
+      "community": 20
     },
     {
       "label": "SQLAlchemy ORM Models for Data Pipeline  Purpose:     Define declarative ORM mod",
       "file_type": "rationale",
       "source_file": "services/collector/src/model/models.py",
       "source_location": "L1",
-      "community": 18,
+      "community": 20,
       "id": "models_rationale_1"
     },
     {
@@ -8128,7 +8128,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/app/modules/market/models.py",
       "source_location": "L20",
-      "community": 18,
+      "community": 20,
       "id": "models_rationale_20"
     },
     {
@@ -8136,7 +8136,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/app/modules/market/models.py",
       "source_location": "L41",
-      "community": 18,
+      "community": 20,
       "id": "models_rationale_41"
     },
     {
@@ -8169,7 +8169,7 @@
       "source_file": "services/backend/app/modules/market/api.py",
       "source_location": "L46",
       "id": "api_get_coverage",
-      "community": 2
+      "community": 5
     },
     {
       "label": "get_ohlc()",
@@ -9025,7 +9025,7 @@
       "source_file": "services/backend/app/core/db.py",
       "source_location": "L1",
       "id": "services_backend_app_core_db_py",
-      "community": 18
+      "community": 20
     },
     {
       "label": "Base",
@@ -9033,7 +9033,7 @@
       "source_file": "services/backend/app/core/db.py",
       "source_location": "L10",
       "id": "db_base",
-      "community": 18
+      "community": 20
     },
     {
       "label": "DeclarativeBase",
@@ -9041,7 +9041,7 @@
       "source_file": "",
       "source_location": "",
       "id": "declarativebase",
-      "community": 18
+      "community": 20
     },
     {
       "label": "init_db()",
@@ -9049,7 +9049,7 @@
       "source_file": "services/backend/app/core/db.py",
       "source_location": "L14",
       "id": "db_init_db",
-      "community": 18
+      "community": 20
     },
     {
       "label": "__init__.py",
@@ -9113,7 +9113,7 @@
       "source_file": "services/backend/app/alembic/env.py",
       "source_location": "L1",
       "id": "services_backend_app_alembic_env_py",
-      "community": 18
+      "community": 20
     },
     {
       "label": "get_url()",
@@ -9121,7 +9121,7 @@
       "source_file": "services/backend/app/alembic/env.py",
       "source_location": "L33",
       "id": "env_get_url",
-      "community": 18
+      "community": 20
     },
     {
       "label": "run_migrations_offline()",
@@ -9129,7 +9129,7 @@
       "source_file": "services/collector/alembic/env.py",
       "source_location": "L44",
       "id": "env_run_migrations_offline",
-      "community": 18
+      "community": 20
     },
     {
       "label": "run_migrations_online()",
@@ -9137,14 +9137,14 @@
       "source_file": "services/collector/alembic/env.py",
       "source_location": "L60",
       "id": "env_run_migrations_online",
-      "community": 18
+      "community": 20
     },
     {
       "label": "Run migrations in 'offline' mode.      This configures the context with just a U",
       "file_type": "rationale",
       "source_file": "services/backend/app/alembic/env.py",
       "source_location": "L38",
-      "community": 18,
+      "community": 20,
       "id": "env_rationale_38"
     },
     {
@@ -9152,7 +9152,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/app/alembic/env.py",
       "source_location": "L59",
-      "community": 18,
+      "community": 20,
       "id": "env_rationale_59"
     },
     {
@@ -9369,7 +9369,7 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L1",
       "id": "services_backend_scripts_seed_market_py",
-      "community": 19
+      "community": 18
     },
     {
       "label": "_nth_weekday()",
@@ -9377,7 +9377,7 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L48",
       "id": "seed_market_nth_weekday",
-      "community": 19
+      "community": 18
     },
     {
       "label": "_last_weekday()",
@@ -9385,7 +9385,7 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L55",
       "id": "seed_market_last_weekday",
-      "community": 19
+      "community": 18
     },
     {
       "label": "_easter()",
@@ -9393,7 +9393,7 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L64",
       "id": "seed_market_easter",
-      "community": 19
+      "community": 18
     },
     {
       "label": "_build_holidays()",
@@ -9401,7 +9401,7 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L79",
       "id": "seed_market_build_holidays",
-      "community": 19
+      "community": 18
     },
     {
       "label": "_is_trading_day()",
@@ -9409,7 +9409,7 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L94",
       "id": "seed_market_is_trading_day",
-      "community": 19
+      "community": 18
     },
     {
       "label": "_gen_daily_prices()",
@@ -9417,7 +9417,7 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L104",
       "id": "seed_market_gen_daily_prices",
-      "community": 19
+      "community": 18
     },
     {
       "label": "seed()",
@@ -9425,7 +9425,7 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L188",
       "id": "seed_market_seed",
-      "community": 19
+      "community": 18
     },
     {
       "label": "main()",
@@ -9433,14 +9433,14 @@
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L255",
       "id": "seed_market_main",
-      "community": 19
+      "community": 18
     },
     {
       "label": "Seed the market schema with sample data.  Creates:   - market.stocks     \u2192 5 sam",
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L1",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_1"
     },
     {
@@ -9448,7 +9448,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L49",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_49"
     },
     {
@@ -9456,7 +9456,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L56",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_56"
     },
     {
@@ -9464,7 +9464,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L65",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_65"
     },
     {
@@ -9472,7 +9472,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L80",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_80"
     },
     {
@@ -9480,7 +9480,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L95",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_95"
     },
     {
@@ -9488,7 +9488,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L111",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_111"
     },
     {
@@ -9496,7 +9496,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L189",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_189"
     },
     {
@@ -9504,7 +9504,7 @@
       "file_type": "rationale",
       "source_file": "services/backend/scripts/seed_market.py",
       "source_location": "L256",
-      "community": 19,
+      "community": 18,
       "id": "seed_market_rationale_256"
     },
     {
@@ -10094,136 +10094,160 @@
     {
       "label": "models.py",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
       "source_location": "L1",
-      "id": "services_collector_src_model_models_py",
+      "id": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "community": 4
     },
     {
-      "label": "Base",
+      "label": "MappedMeta",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L65",
-      "id": "models_base",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L61",
+      "id": "models_mappedmeta",
+      "community": 4
+    },
+    {
+      "label": "type",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "id": "type",
+      "community": 4
+    },
+    {
+      "label": ".__getitem__()",
+      "file_type": "code",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L62",
+      "id": "models_mappedmeta_getitem",
+      "community": 4
+    },
+    {
+      "label": "Mapped",
+      "file_type": "code",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L64",
+      "id": "models_mapped",
       "community": 4
     },
     {
       "label": "MarketData",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L69",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L78",
       "id": "models_marketdata",
       "community": 4
     },
     {
       "label": "IngestError",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L123",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L132",
       "id": "models_ingesterror",
       "community": 4
     },
     {
       "label": "MarketData5m",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L157",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L166",
       "id": "models_marketdata5m",
       "community": 4
     },
     {
       "label": "AuthorityConflict",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L194",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L203",
       "id": "models_authorityconflict",
       "community": 4
     },
     {
       "label": "BackupLog",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L222",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L231",
       "id": "models_backuplog",
       "community": 4
     },
     {
       "label": "CastError",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L252",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L261",
       "id": "models_casterror",
       "community": 4
     },
     {
       "label": "ConcurrencyIssue",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L278",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L287",
       "id": "models_concurrencyissue",
       "community": 4
     },
     {
       "label": "DataQualityError",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L302",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L311",
       "id": "models_dataqualityerror",
       "community": 4
     },
     {
       "label": "DedupConflict",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L328",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L337",
       "id": "models_dedupconflict",
       "community": 4
     },
     {
       "label": "IngestionLog",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L356",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L365",
       "id": "models_ingestionlog",
       "community": 4
     },
     {
       "label": "PipelineLog",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L384",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L393",
       "id": "models_pipelinelog",
       "community": 4
     },
     {
       "label": "PipelineWatermark",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L414",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L423",
       "id": "models_pipelinewatermark",
       "community": 4
     },
     {
       "label": "UpsertFailure",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L435",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L444",
       "id": "models_upsertfailure",
       "community": 4
     },
     {
       "label": "TransformMarketData",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L461",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L470",
       "id": "models_transformmarketdata",
       "community": 4
     },
     {
       "label": "TransformError",
       "file_type": "code",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L485",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L494",
       "id": "models_transformerror",
       "community": 4
     },
@@ -10505,7 +10529,7 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L1",
       "id": "services_collector_src_utils_time_utils_py",
-      "community": 20
+      "community": 19
     },
     {
       "label": "parse_hhmm()",
@@ -10513,7 +10537,7 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L12",
       "id": "time_utils_parse_hhmm",
-      "community": 20
+      "community": 19
     },
     {
       "label": "current_hour()",
@@ -10521,7 +10545,7 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L24",
       "id": "time_utils_current_hour",
-      "community": 20
+      "community": 19
     },
     {
       "label": "parse_api_time()",
@@ -10529,7 +10553,7 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L29",
       "id": "time_utils_parse_api_time",
-      "community": 20
+      "community": 19
     },
     {
       "label": "ymd()",
@@ -10537,7 +10561,7 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L34",
       "id": "time_utils_ymd",
-      "community": 20
+      "community": 19
     },
     {
       "label": "align_to_5_minute()",
@@ -10545,7 +10569,7 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L39",
       "id": "time_utils_align_to_5_minute",
-      "community": 20
+      "community": 19
     },
     {
       "label": "infer_timestamp()",
@@ -10553,7 +10577,7 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L45",
       "id": "time_utils_infer_timestamp",
-      "community": 20
+      "community": 19
     },
     {
       "label": "compute_window()",
@@ -10561,7 +10585,7 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L70",
       "id": "time_utils_compute_window",
-      "community": 20
+      "community": 19
     },
     {
       "label": "is_market_open()",
@@ -10569,14 +10593,14 @@
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L83",
       "id": "time_utils_is_market_open",
-      "community": 20
+      "community": 19
     },
     {
       "label": "Time manipulation and formatting utilities for stock data collection. Handles ti",
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L1",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_1"
     },
     {
@@ -10584,7 +10608,7 @@
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L13",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_13"
     },
     {
@@ -10592,7 +10616,7 @@
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L25",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_25"
     },
     {
@@ -10600,7 +10624,7 @@
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L30",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_30"
     },
     {
@@ -10608,7 +10632,7 @@
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L35",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_35"
     },
     {
@@ -10616,7 +10640,7 @@
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L40",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_40"
     },
     {
@@ -10624,7 +10648,7 @@
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L51",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_51"
     },
     {
@@ -10632,7 +10656,7 @@
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L71",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_71"
     },
     {
@@ -10640,7 +10664,7 @@
       "file_type": "rationale",
       "source_file": "services/collector/src/utils/time_utils.py",
       "source_location": "L84",
-      "community": 20,
+      "community": 19,
       "id": "time_utils_rationale_84"
     },
     {
@@ -10945,7 +10969,7 @@
       "source_file": "services/collector/alembic/env.py",
       "source_location": "L1",
       "id": "services_collector_alembic_env_py",
-      "community": 18
+      "community": 20
     },
     {
       "label": "get_database_url()",
@@ -10953,7 +10977,7 @@
       "source_file": "services/collector/alembic/env.py",
       "source_location": "L30",
       "id": "env_get_database_url",
-      "community": 18
+      "community": 20
     },
     {
       "label": "20260312_0001_baseline_schema.py",
@@ -36534,6 +36558,186 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L78",
+      "weight": 1.0,
+      "_src": "models_marketdata",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_marketdata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L132",
+      "weight": 1.0,
+      "_src": "models_ingesterror",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_ingesterror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L166",
+      "weight": 1.0,
+      "_src": "models_marketdata5m",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_marketdata5m",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L203",
+      "weight": 1.0,
+      "_src": "models_authorityconflict",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_authorityconflict",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L231",
+      "weight": 1.0,
+      "_src": "models_backuplog",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_backuplog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L261",
+      "weight": 1.0,
+      "_src": "models_casterror",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_casterror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L287",
+      "weight": 1.0,
+      "_src": "models_concurrencyissue",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_concurrencyissue",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L311",
+      "weight": 1.0,
+      "_src": "models_dataqualityerror",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_dataqualityerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L337",
+      "weight": 1.0,
+      "_src": "models_dedupconflict",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_dedupconflict",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L365",
+      "weight": 1.0,
+      "_src": "models_ingestionlog",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_ingestionlog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L393",
+      "weight": 1.0,
+      "_src": "models_pipelinelog",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_pipelinelog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L423",
+      "weight": 1.0,
+      "_src": "models_pipelinewatermark",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_pipelinewatermark",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L444",
+      "weight": 1.0,
+      "_src": "models_upsertfailure",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_upsertfailure",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L470",
+      "weight": 1.0,
+      "_src": "models_transformmarketdata",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_transformmarketdata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L494",
+      "weight": 1.0,
+      "_src": "models_transformerror",
+      "_tgt": "base",
+      "source": "base",
+      "target": "models_transformerror",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "services/backend/app/modules/market/models.py",
@@ -36584,13 +36788,13 @@
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
       "source_location": "L1",
       "weight": 1.0,
       "_src": "models_rationale_1",
-      "_tgt": "services_collector_src_model_models_py",
+      "_tgt": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "source": "models_rationale_1",
-      "target": "services_collector_src_model_models_py",
+      "target": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "confidence_score": 1.0
     },
     {
@@ -38896,18 +39100,6 @@
       "confidence_score": 0.5,
       "source": "db_base",
       "target": "env_rationale_59"
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L65",
-      "weight": 1.0,
-      "_src": "models_base",
-      "_tgt": "declarativebase",
-      "source": "declarativebase",
-      "target": "models_base",
-      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -41228,386 +41420,230 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L65",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L61",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
-      "_tgt": "models_base",
-      "source": "services_collector_src_model_models_py",
-      "target": "models_base",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
+      "_tgt": "models_mappedmeta",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
+      "target": "models_mappedmeta",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L69",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L64",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
+      "_tgt": "models_mapped",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
+      "target": "models_mapped",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L78",
+      "weight": 1.0,
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_marketdata",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_marketdata",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L123",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L132",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_ingesterror",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_ingesterror",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L157",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L166",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_marketdata5m",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_marketdata5m",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L194",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L203",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_authorityconflict",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_authorityconflict",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L222",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L231",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_backuplog",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_backuplog",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L252",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L261",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_casterror",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_casterror",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L278",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L287",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_concurrencyissue",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_concurrencyissue",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L302",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L311",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_dataqualityerror",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_dataqualityerror",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L328",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L337",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_dedupconflict",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_dedupconflict",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L356",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L365",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_ingestionlog",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_ingestionlog",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L384",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L393",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_pipelinelog",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_pipelinelog",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L414",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L423",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_pipelinewatermark",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_pipelinewatermark",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L435",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L444",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_upsertfailure",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_upsertfailure",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L461",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L470",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_transformmarketdata",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_transformmarketdata",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L485",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L494",
       "weight": 1.0,
-      "_src": "services_collector_src_model_models_py",
+      "_src": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "_tgt": "models_transformerror",
-      "source": "services_collector_src_model_models_py",
+      "source": "data_projects_algo_trade_monorepo_services_collector_src_model_models_py",
       "target": "models_transformerror",
       "confidence_score": 1.0
     },
     {
       "relation": "inherits",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L69",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L61",
       "weight": 1.0,
-      "_src": "models_marketdata",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_marketdata",
+      "_src": "models_mappedmeta",
+      "_tgt": "type",
+      "source": "models_mappedmeta",
+      "target": "type",
       "confidence_score": 1.0
     },
     {
-      "relation": "inherits",
+      "relation": "method",
       "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L123",
+      "source_file": "/data/projects/Algo-trade-monorepo/services/collector/src/model/models.py",
+      "source_location": "L62",
       "weight": 1.0,
-      "_src": "models_ingesterror",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_ingesterror",
+      "_src": "models_mappedmeta",
+      "_tgt": "models_mappedmeta_getitem",
+      "source": "models_mappedmeta",
+      "target": "models_mappedmeta_getitem",
       "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L157",
-      "weight": 1.0,
-      "_src": "models_marketdata5m",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_marketdata5m",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L194",
-      "weight": 1.0,
-      "_src": "models_authorityconflict",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_authorityconflict",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L222",
-      "weight": 1.0,
-      "_src": "models_backuplog",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_backuplog",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L252",
-      "weight": 1.0,
-      "_src": "models_casterror",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_casterror",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L278",
-      "weight": 1.0,
-      "_src": "models_concurrencyissue",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_concurrencyissue",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L302",
-      "weight": 1.0,
-      "_src": "models_dataqualityerror",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_dataqualityerror",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L328",
-      "weight": 1.0,
-      "_src": "models_dedupconflict",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_dedupconflict",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L356",
-      "weight": 1.0,
-      "_src": "models_ingestionlog",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_ingestionlog",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L384",
-      "weight": 1.0,
-      "_src": "models_pipelinelog",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_pipelinelog",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L414",
-      "weight": 1.0,
-      "_src": "models_pipelinewatermark",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_pipelinewatermark",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L435",
-      "weight": 1.0,
-      "_src": "models_upsertfailure",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_upsertfailure",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L461",
-      "weight": 1.0,
-      "_src": "models_transformmarketdata",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_transformmarketdata",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "services/collector/src/model/models.py",
-      "source_location": "L485",
-      "weight": 1.0,
-      "_src": "models_transformerror",
-      "_tgt": "models_base",
-      "source": "models_base",
-      "target": "models_transformerror",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "uses",
-      "confidence": "INFERRED",
-      "source_file": "services/collector/src/model/orm_db.py",
-      "source_location": "L30",
-      "weight": 0.8,
-      "_src": "models_base",
-      "_tgt": "orm_db_rationale_1",
-      "confidence_score": 0.5,
-      "source": "models_base",
-      "target": "orm_db_rationale_1"
     },
     {
       "relation": "uses",

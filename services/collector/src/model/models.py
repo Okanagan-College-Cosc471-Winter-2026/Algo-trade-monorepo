@@ -53,7 +53,17 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column
+try:
+    from sqlalchemy.orm import Mapped, mapped_column
+except Exception:  # SQLAlchemy < 2.0 compatibility (Airflow env)
+    class MappedMeta(type):
+        def __getitem__(cls, key):  # type: ignore[override]
+            return key
+    class Mapped(metaclass=MappedMeta):  # type: ignore[no-redef]
+        pass
+    mapped_column = Column
 
 # Keep a single module object regardless of whether callers import
 # `model.models` (runtime path) or `src.model.models` (package path).
@@ -62,8 +72,7 @@ if __name__ == "model.models":
 elif __name__ == "src.model.models":
     sys.modules.setdefault("model.models", sys.modules[__name__])
 
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 
 class MarketData(Base):

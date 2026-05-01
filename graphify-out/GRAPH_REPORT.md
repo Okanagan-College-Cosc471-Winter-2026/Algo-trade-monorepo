@@ -1,12 +1,12 @@
-# Graph Report - .  (2026-05-01)
+# Graph Report - /data/projects/Algo-trade-monorepo  (2026-05-01)
 
 ## Corpus Check
-- 138 files · ~177,495 words
+- 138 files · ~177,845 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1449 nodes · 2747 edges · 120 communities detected
-- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 170 edges (avg confidence: 0.5)
+- 1452 nodes · 2748 edges · 120 communities detected
+- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 169 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -144,16 +144,16 @@
 10. `simulate_warm_refresh()` - 19 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Base` --uses--> `Database Connection & Initialization  Purpose:     Manage SQLAlchemy engine crea`  [INFERRED]
-  services/collector/src/model/models.py → services/collector/src/model/orm_db.py
-- `Dimension table for tradable instruments.      Mirrors dim_stock + dim_company f` --uses--> `Base`  [INFERRED]
-  services/backend/app/modules/market/models.py → services/backend/app/core/db.py
-- `Fact table for daily market metrics.      Mirrors the price columns of fact_mark` --uses--> `Base`  [INFERRED]
-  services/backend/app/modules/market/models.py → services/backend/app/core/db.py
-- `StockRead` --uses--> `Return all active stocks as API response objects.`  [INFERRED]
-  services/backend/app/modules/market/schemas.py → services/backend/app/modules/market/service.py
-- `StockRead` --uses--> `Return 15-min OHLC bars for the last *days* calendar days.          Timestamps a`  [INFERRED]
-  services/backend/app/modules/market/schemas.py → services/backend/app/modules/market/service.py
+- `Run intraday data collection. Returns True on success, False on error.` --uses--> `PipelineLog`  [INFERRED]
+  services/collector/src/run_15min_pipeline.py → /data/projects/Algo-trade-monorepo/services/collector/src/model/models.py
+- `Export validated rows from stg_raw → core_dbms.market_data_5m.` --uses--> `PipelineLog`  [INFERRED]
+  services/collector/src/run_15min_pipeline.py → /data/projects/Algo-trade-monorepo/services/collector/src/model/models.py
+- `Call dw.process_15min_window for the closed 15-min bar.` --uses--> `PipelineLog`  [INFERRED]
+  services/collector/src/run_15min_pipeline.py → /data/projects/Algo-trade-monorepo/services/collector/src/model/models.py
+- `Verify the latest 5-minute bar for a 15-minute window exists in core table.` --uses--> `PipelineLog`  [INFERRED]
+  services/collector/src/run_15min_pipeline.py → /data/projects/Algo-trade-monorepo/services/collector/src/model/models.py
+- `Persist latest successful 15-minute data window for downstream DAG gating.` --uses--> `PipelineLog`  [INFERRED]
+  services/collector/src/run_15min_pipeline.py → /data/projects/Algo-trade-monorepo/services/collector/src/model/models.py
 
 ## Communities
 
@@ -167,7 +167,7 @@ Nodes (104): add_group_rolling_features_by_keys(), align_features_for_inference(
 
 ### Community 2 - "Community 2"
 Cohesion: 0.04
-Nodes (85): ABC, get_base_prediction(), get_coverage(), get_session_info(), get_simulation_history(), get_simulation_ohlc(), get_simulation_symbols(), get_step_prediction() (+77 more)
+Nodes (84): ABC, get_base_prediction(), get_session_info(), get_simulation_history(), get_simulation_ohlc(), get_simulation_symbols(), get_step_prediction(), predict_base_stock_price() (+76 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.06
@@ -175,11 +175,11 @@ Nodes (92): add_group_rolling_features(), add_group_rolling_features_by_keys(), 
 
 ### Community 4 - "Community 4"
 Cohesion: 0.04
-Nodes (87): _coerce_float(), _construct_source_url(), _fetch_api_data(), _insert_batch(), _process_data_batch(), Shared collector helpers for market data ingestion scripts.  This module central, Construct the source URL for a given symbol and date range., Fetch stock data from API and return raw rows. (+79 more)
+Nodes (90): Base, _coerce_float(), _construct_source_url(), _fetch_api_data(), _insert_batch(), _process_data_batch(), Shared collector helpers for market data ingestion scripts.  This module central, Construct the source URL for a given symbol and date range. (+82 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.08
-Nodes (41): build_snapshot(), download_snapshot(), ensure_snapshot_dir(), get_all_tables(), get_db_engine(), get_ohlc(), get_stock(), health_check() (+33 more)
+Nodes (42): build_snapshot(), download_snapshot(), ensure_snapshot_dir(), get_all_tables(), get_coverage(), get_db_engine(), get_ohlc(), get_stock() (+34 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.07
@@ -230,16 +230,16 @@ Cohesion: 0.2
 Nodes (17): aggregate_step_metrics(), artifact_notes(), build_actual_wide(), build_model_comparison(), build_scored_tables(), collect_artifact_metadata(), direction_label(), infer_dates() (+9 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.19
-Nodes (14): Base, Base, DeclarativeBase, get_database_url(), get_url(), Run migrations in 'offline' mode.      This configures the context with just a U, Run migrations in 'online' mode.      In this scenario we need to create an Engi, run_migrations_offline() (+6 more)
-
-### Community 19 - "Community 19"
 Cohesion: 0.16
 Nodes (17): _build_holidays(), _easter(), _gen_daily_prices(), _is_trading_day(), _last_weekday(), main(), _nth_weekday(), Seed the market schema with sample data.  Creates:   - market.stocks     → 5 sam (+9 more)
 
-### Community 20 - "Community 20"
+### Community 19 - "Community 19"
 Cohesion: 0.12
 Nodes (17): align_to_5_minute(), compute_window(), current_hour(), infer_timestamp(), is_market_open(), parse_api_time(), parse_hhmm(), Time manipulation and formatting utilities for stock data collection. Handles ti (+9 more)
+
+### Community 20 - "Community 20"
+Cohesion: 0.2
+Nodes (13): Base, DeclarativeBase, get_database_url(), get_url(), Run migrations in 'offline' mode.      This configures the context with just a U, Run migrations in 'online' mode.      In this scenario we need to create an Engi, run_migrations_offline(), run_migrations_online() (+5 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.16
@@ -638,7 +638,7 @@ Cohesion: 1.0
 Nodes (1): Atomically update a symlink via Linux rename() — uses relative path for Docker c
 
 ## Knowledge Gaps
-- **243 isolated node(s):** `Submit one 8-hour job, poll until done. Returns job_id.`, `TEST 01 — Stage 1: Raw Ingest → stg_raw.market_data ────────────────────────────`, `Remove test rows before and after each test.`, `TEST — NIBI HPC Connectivity ────────────────────────────── Tests the full manua`, `Run a command on NIBI via SSH.     Uses the 'nibi' alias from ~/.ssh/config whic` (+238 more)
+- **245 isolated node(s):** `Submit one 8-hour job, poll until done. Returns job_id.`, `TEST 01 — Stage 1: Raw Ingest → stg_raw.market_data ────────────────────────────`, `Remove test rows before and after each test.`, `TEST — NIBI HPC Connectivity ────────────────────────────── Tests the full manua`, `Run a command on NIBI via SSH.     Uses the 'nibi' alias from ~/.ssh/config whic` (+240 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 81`** (2 nodes): `merge_datasets()`, `merge_5yr_dataset.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -729,7 +729,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `_request()` connect `Community 5` to `Community 8`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **What connects `Submit one 8-hour job, poll until done. Returns job_id.`, `TEST 01 — Stage 1: Raw Ingest → stg_raw.market_data ────────────────────────────`, `Remove test rows before and after each test.` to the rest of the system?**
-  _243 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _245 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.06 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
