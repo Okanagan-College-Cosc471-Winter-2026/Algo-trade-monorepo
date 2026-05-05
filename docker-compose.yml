@@ -36,7 +36,7 @@ x-airflow-common: &airflow-common
     ARTIFACTS_DIR: /model_artifacts
     DATASETS_DIR: /data/datasets
     # Extra pip packages baked in at container startup
-    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-ssh psycopg2-binary exchange-calendars"
+    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-ssh psycopg2-binary psycopg exchange-calendars"
   volumes:
     - ./airflow/airflow/dags:/opt/airflow/dags:ro
     - ./model_artifacts:/model_artifacts
@@ -139,6 +139,18 @@ services:
       - STREAMLIT_SERVER_HEADLESS=true
       - STREAMLIT_SERVER_ENABLE_CORS=false
       - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+    depends_on:
+      backend: {condition: service_healthy}
+
+  frontend-react:
+    build:
+      context: services/frontend-react
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api/v1}
+    image: maverick-react
+    restart: always
+    ports: ["3000:80"]
     depends_on:
       backend: {condition: service_healthy}
 

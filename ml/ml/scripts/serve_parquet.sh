@@ -1,8 +1,13 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+LOG_DIR="$REPO_ROOT/logs"
+mkdir -p "$LOG_DIR"
+
 PARQUET_DIR="/home/cosc-admin/the-project-maverick/ml/data/processed_parquet"
 PORT=8000
-TUNNEL_LOG="/tmp/parquet_tunnel.log"
+TUNNEL_LOG="$LOG_DIR/parquet_tunnel.log"
 
 # Kill any existing instances
 pkill -f "http.server $PORT" 2>/dev/null

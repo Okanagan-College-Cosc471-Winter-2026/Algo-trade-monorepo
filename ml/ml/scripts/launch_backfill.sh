@@ -1,7 +1,8 @@
 #!/usr/bin/env zsh
 cd /home/cosc-admin/the-project-maverick
-LOG="ml/data/quality_refetch_reports/missing_symbols_backfill.log"
-PID_FILE="ml/data/quality_refetch_reports/missing_symbols_backfill.pid"
+mkdir -p logs
+LOG="logs/ml_missing_symbols_backfill.log"
+PID_FILE="logs/ml_missing_symbols_backfill.pid"
 echo $$ > "$PID_FILE"
 exec python -u ml/scripts/refetch_market_data_15m_quality.py \
   --mode simple-fmp \

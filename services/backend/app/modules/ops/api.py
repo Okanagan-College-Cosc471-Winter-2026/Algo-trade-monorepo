@@ -195,6 +195,230 @@ def _nibi_job_info() -> dict:
     return rec
 
 
+def _base_only_flow_info() -> dict:
+    """Read the latest machine-readable base-only pipeline status, if present."""
+    path = LOGS_DIR / "nibi_base_only_status.json"
+    info = _read_json(path)
+    if info:
+        info["found"] = True
+        info["status_file"] = path.name
+        return info
+    return {"found": False}
+
+
+def _parse_iso_utc(value: Any) -> dt.datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=dt.timezone.utc)
+        return parsed.astimezone(dt.timezone.utc)
+    except Exception:
+        return None
+
+
+def _parse_date(value: Any) -> dt.date | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return dt.date.fromisoformat(text[:10])
+    except Exception:
+        return None
+
+
+def _next_day(value: str | None) -> str | None:
+    parsed = _parse_date(value)
+    if not parsed:
+        return None
+    return (parsed + dt.timedelta(days=1)).isoformat()
+
+
+def _resolve_nibi_job_card(
+    file_job: dict[str, Any],
+    flow: dict[str, Any],
+    live_primary: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """
+    Pick the best job-card source:
+    - Prefer live queue job when available.
+    - Else prefer the freshest of flow-status vs legacy nibi_job_*.json.
+    """
+    if live_primary:
+        return {
+            "found": True,
+            "source": "live_queue",
+            "job_id": live_primary.get("job_id"),
+            "name": live_primary.get("name"),
+            "status": str(live_primary.get("state", "")).lower() or None,
+            "live_state": str(live_primary.get("state", "")).upper() or None,
+            "submitted_at": None,
+            "sim_date": flow.get("sim_date") or file_job.get("sim_date"),
+            "log_file": file_job.get("log_file"),
+        }
+
+    flow_ts = _parse_iso_utc(flow.get("updated_at_utc"))
+    file_ts = _parse_iso_utc(file_job.get("submitted_at"))
+    use_flow = bool(flow.get("found")) and (
+        flow_ts is not None and (file_ts is None or flow_ts >= file_ts)
+    )
+
+    if use_flow:
+        return {
+            "found": True,
+            "source": "base_only_flow",
+            "job_id": flow.get("job_id"),
+            "name": "sim_base_train",
+            "status": flow.get("status"),
+            "live_state": None,
+            "submitted_at": flow.get("updated_at_utc"),
+            "sim_date": flow.get("sim_date"),
+            "log_file": flow.get("status_file"),
+        }
+
+    if file_job.get("found"):
+        return {
+            **file_job,
+            "source": "nibi_job_file",
+        }
+
+    return {"found": False}
+
+
+def _read_snapshot_meta(cutoff_date: str | None) -> dict:
+    if not cutoff_date:
+        return {}
+    return _read_json(REPO_ROOT / "datasets" / f"snapshot_{cutoff_date}.meta.json")
+
+
+def _job_kind(job: dict[str, Any] | None) -> str | None:
+    if not job:
+        return None
+    name = str(job.get("name", "")).lower()
+    if "sim_base_train" in name:
+        return "base_train"
+    if "simulate_full_day" in name or "warm" in name:
+        return "warm_refresh"
+    return None
+
+
+def _normalize_stage_status(status: str | None) -> str:
+    status = str(status or "").lower()
+    if status == "ok":
+        return "completed"
+    if status in {"running", "error", "pending", "completed", "not_started"}:
+        return status
+    return "not_started"
+
+
+def _build_training_flow(
+    ssh_alive: bool,
+    job: dict[str, Any],
+    live_primary: dict[str, Any] | None,
+    model: dict[str, Any],
+    latest_data_date: str | None,
+) -> dict[str, Any]:
+    flow = _base_only_flow_info()
+    active_cutoff = str(model.get("train_end_date") or "")
+    cutoff_date = latest_data_date or flow.get("cutoff_date") or active_cutoff or None
+    flow_matches_target = bool(flow.get("found")) and flow.get("cutoff_date") == cutoff_date
+    if not flow_matches_target:
+        flow = {"found": False}
+    sim_date = flow.get("sim_date") or _next_day(cutoff_date)
+    snapshot = flow.get("snapshot") or _read_snapshot_meta(cutoff_date)
+    promoted_for_cutoff = bool(cutoff_date and active_cutoff == cutoff_date)
+
+    live_state = str((live_primary or {}).get("state", "")).upper()
+    live_kind = _job_kind(live_primary)
+    flow_stage = str(flow.get("stage", ""))
+    flow_status = _normalize_stage_status(flow.get("status"))
+    flow_message = flow.get("message")
+    def from_flow(stages: set[str]) -> str | None:
+        return flow_status if flow.get("found") and flow_stage in stages else None
+
+    snapshot_status = "completed" if snapshot.get("validation_ok") else "not_started"
+    if flow_stage in {"export_snapshot", "validate_snapshot", "upload_snapshot"} and flow_status in {"running", "error"}:
+        snapshot_status = flow_status
+
+    base_train_status = "not_started"
+    if live_kind == "base_train":
+        base_train_status = "running" if live_state == "RUNNING" else "pending"
+    elif promoted_for_cutoff or from_flow({"base_train", "verify_remote_artifacts", "download_artifacts", "promote_base", "reload_backend", "completed"}) == "completed":
+        base_train_status = "completed"
+    elif from_flow({"submit_base_train", "base_train"}) in {"running", "pending", "error"}:
+        base_train_status = from_flow({"submit_base_train", "base_train"}) or "not_started"
+    elif cutoff_date and active_cutoff and _parse_date(cutoff_date) and _parse_date(active_cutoff) and _parse_date(cutoff_date) > _parse_date(active_cutoff):
+        base_train_status = "pending"
+    elif cutoff_date and not active_cutoff:
+        base_train_status = "pending"
+
+    promote_status = "completed" if promoted_for_cutoff else "not_started"
+    if flow_stage in {"download_artifacts", "promote_base", "reload_backend"} and flow_status in {"running", "error"}:
+        promote_status = flow_status
+
+    stages = [
+        {
+            "id": "ssh_socket",
+            "label": "SSH Socket",
+            "status": "completed" if ssh_alive else "error",
+            "detail": "NIBI control socket available" if ssh_alive else "NIBI control socket unavailable",
+        },
+        {
+            "id": "snapshot_validated",
+            "label": "Snapshot Validated",
+            "status": snapshot_status,
+            "detail": (
+                f"cutoff={cutoff_date} symbols={snapshot.get('cutoff_symbols')} "
+                f"open={snapshot.get('open_bar_symbols')} close={snapshot.get('close_bar_symbols')}"
+            ).strip(),
+        },
+        {
+            "id": "base_train",
+            "label": "Base Train",
+            "status": base_train_status,
+            "detail": (
+                f"job={((live_primary or {}).get('job_id') or flow.get('job_id') or '—')} "
+                f"state={live_state or flow.get('status') or 'scheduled'} "
+                f"sim_date={sim_date or '—'}"
+            ),
+        },
+        {
+            "id": "promote_base",
+            "label": "Promote Base",
+            "status": promote_status,
+            "detail": f"active_cutoff={active_cutoff or '—'}",
+        },
+    ]
+
+    current_stage = flow_stage
+    if not current_stage:
+        if live_kind == "base_train":
+            current_stage = "base_train"
+        elif base_train_status == "pending":
+            current_stage = "base_train"
+        elif promoted_for_cutoff:
+            current_stage = "promote_base"
+        elif snapshot.get("validation_ok"):
+            current_stage = "snapshot_validated"
+        else:
+            current_stage = "ssh_socket"
+
+    return {
+        "pipeline": flow.get("pipeline") or "derived",
+        "cutoff_date": cutoff_date,
+        "sim_date": sim_date,
+        "current_stage": current_stage,
+        "status": flow_status if flow.get("found") else "derived",
+        "message": flow_message,
+        "job_id": flow.get("job_id") or (live_primary or {}).get("job_id") or job.get("job_id"),
+        "snapshot": snapshot,
+        "status_file": flow.get("status_file"),
+        "stages": stages,
+    }
+
+
 def _machine_info() -> dict:
     """Collect VPS hardware metrics via psutil."""
     cpu_pct      = psutil.cpu_percent(interval=0.5)
@@ -414,9 +638,6 @@ def get_ops_status(db: Session = Depends(get_db)) -> dict:
     # 1. SSH socket
     ssh_alive = _socket_alive()
 
-    # 2. NIBI job record (best-effort, local log)
-    job = _nibi_job_info()
-
     # 3. Active model
     model = _active_model_info()
 
@@ -428,6 +649,12 @@ def get_ops_status(db: Session = Depends(get_db)) -> dict:
     # 5. NIBI GPU (only when at least one live job is RUNNING)
     any_running = any(str(j.get("state", "")).upper() == "RUNNING" for j in nibi_jobs.get("queued", []))
     nibi_gpu = _nibi_gpu_info(ssh_alive) if any_running else None
+
+    # 5b. End-to-end training flow snapshot + normalized job card
+    job_file = _nibi_job_info()
+    flow_info = _base_only_flow_info()
+    training_flow = _build_training_flow(ssh_alive, job_file, live_primary, model)
+    job = _resolve_nibi_job_card(job_file, flow_info, live_primary)
 
     # 6. Data freshness
     freshness: dict[str, Any] = {}
@@ -475,10 +702,11 @@ def get_ops_status(db: Session = Depends(get_db)) -> dict:
         "generated_at": now.isoformat(),
         "nibi_user":    NIBI_USER,
         "ssh_socket":   {"alive": ssh_alive},
-        "nibi_job":     {**job, "live_state": nibi_live_state},
+        "nibi_job":     {**job, "live_state": nibi_live_state or job.get("live_state")},
         "live_job_primary": live_primary,
         "nibi_jobs":    nibi_jobs,
         "model":        model,
+        "training_flow": training_flow,
         "machine":      _machine_info(),
         "nibi_gpu":     nibi_gpu,
         "data":         freshness,

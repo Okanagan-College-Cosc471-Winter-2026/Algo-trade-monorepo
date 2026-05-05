@@ -17,9 +17,19 @@ from airflow.operators.python import PythonOperator
 from market_calendar_utils import expected_last_closed_window_start_utc
 
 
-REPO_ROOT = Path("/data/projects/Algo-trade-monorepo")
+import sys
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 PIPELINE_SCRIPT = REPO_ROOT / "services" / "collector" / "src" / "run_15min_pipeline.py"
-PIPELINE_PYTHON = REPO_ROOT / "pipeline-venv" / "bin" / "python"
+PIPELINE_PYTHON_PATH = REPO_ROOT / "pipeline-venv" / "bin" / "python"
+if PIPELINE_PYTHON_PATH.exists():
+    try:
+        subprocess.run([str(PIPELINE_PYTHON_PATH), "--version"], capture_output=True, check=True)
+        PIPELINE_PYTHON = PIPELINE_PYTHON_PATH
+    except (subprocess.SubprocessError, FileNotFoundError, PermissionError):
+        PIPELINE_PYTHON = Path(sys.executable)
+else:
+    PIPELINE_PYTHON = Path(sys.executable)
 FRESHNESS_FILE = Path(
     os.getenv("INTRADAY_FRESHNESS_FILE", str(REPO_ROOT / "logs" / "intraday_data_freshness.json"))
 )

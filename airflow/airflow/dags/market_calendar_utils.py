@@ -48,7 +48,7 @@ def get_session_gate(now: dt.datetime | None = None, tz_name: str = "America/New
     close_col = "close" if "close" in row else "market_close"
     session_open_et = row[open_col].to_pydatetime().astimezone(market_tz)
     session_close_et = row[close_col].to_pydatetime().astimezone(market_tz)
-    is_open_now = session_open_et <= now_et < session_close_et
+    is_open_now = session_open_et <= now_et <= session_close_et
     is_half_day = session_close_et.timetz().replace(tzinfo=None) < dt.time(16, 0)
     return SessionGate(
         now_et=now_et,

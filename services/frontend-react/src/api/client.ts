@@ -5,7 +5,8 @@ import {
   SimSession, SimStepPrediction, OpsStatus, AirflowStatus, PipelineLog
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+// Default to same-origin `/api/v1` so Cloudflare tunnels and prod nginx proxy work without bake-time URLs.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

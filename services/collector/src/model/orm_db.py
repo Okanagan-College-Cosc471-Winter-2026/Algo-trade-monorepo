@@ -40,7 +40,7 @@ SCHEMA_NAMES = (
 
 
 def build_postgres_url(host: str, port: int, database: str, user: str, password: str) -> str:
-    return f"postgresql+psycopg://{user}:{password}@{host}:{port}/{database}"
+    return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
 
 
 def get_engine(host: str, port: int, database: str, user: str, password: str):

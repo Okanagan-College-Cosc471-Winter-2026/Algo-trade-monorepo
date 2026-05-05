@@ -70,7 +70,7 @@ DB_NAME = os.getenv("POSTGRES_DB",      os.getenv("OLD_DB_NAME",  "market_data")
 DB_USER = os.getenv("POSTGRES_USER",    os.getenv("OLD_DB_USER",  "mluser"))
 DB_PASS = os.getenv("POSTGRES_PASSWORD", os.getenv("OLD_DB_PASSWORD", ""))
 
-REPO_ROOT     = Path("/data/projects/Algo-trade-monorepo")
+REPO_ROOT     = Path(__file__).resolve().parents[3]
 DATASETS_DIR  = REPO_ROOT / "datasets"
 ARTIFACTS_DIR = REPO_ROOT / "model_artifacts"
 ML_SRC        = REPO_ROOT / "ml" / "ml"
@@ -93,7 +93,7 @@ MARKET_TZ = ZoneInfo("America/New_York")
 FRESHNESS_FILE = Path(
     os.getenv(
         "INTRADAY_FRESHNESS_FILE",
-        "/data/projects/Algo-trade-monorepo/logs/intraday_data_freshness.json",
+        str(REPO_ROOT / "logs" / "intraday_data_freshness.json"),
     )
 )
 

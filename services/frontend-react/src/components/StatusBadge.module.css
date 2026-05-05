@@ -1,0 +1,45 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.success {
+  background-color: #16a34a;
+  color: white;
+}
+
+.warning {
+  background-color: #d97706;
+  color: white;
+}
+
+.error {
+  background-color: #dc2626;
+  color: white;
+}
+
+.info {
+  background-color: #0284c7;
+  color: white;
+}
+
+.neutral {
+  background-color: #64748b;
+  color: white;
+}
+
+.running {
+  background-color: #16a34a;
+  color: white;
+}
+
+.pending {
+  background-color: #d97706;
+  color: white;
+}

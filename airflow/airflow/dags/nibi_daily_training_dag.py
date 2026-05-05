@@ -57,13 +57,24 @@ DB_NAME = os.getenv("POSTGRES_DB",     os.getenv("OLD_DB_NAME",  "market_data"))
 DB_USER = os.getenv("POSTGRES_USER",   os.getenv("OLD_DB_USER",  "mluser"))
 DB_PASS = os.getenv("POSTGRES_PASSWORD", os.getenv("OLD_DB_PASSWORD", ""))
 
-REPO_ROOT      = Path("/data/projects/Algo-trade-monorepo")
+REPO_ROOT      = Path(__file__).resolve().parents[3]
 DATASETS_DIR   = REPO_ROOT / "datasets"
 ARTIFACTS_DIR  = REPO_ROOT / "model_artifacts"
 ML_SRC         = REPO_ROOT / "ml" / "ml"
-COLLECTOR_SRC  = REPO_ROOT / "services" / "collector" / "src"
+COLLECTOR_SRC = REPO_ROOT / "services" / "collector" / "src"
+PIPELINE_PYTHON_PATH = REPO_ROOT / "pipeline-venv" / "bin" / "python"
+if PIPELINE_PYTHON_PATH.exists():
+    # If it exists but is a broken symlink (common in Docker), subprocess.run will fail
+    try:
+        subprocess.run([str(PIPELINE_PYTHON_PATH), "--version"], capture_output=True, check=True)
+        PIPELINE_PYTHON = PIPELINE_PYTHON_PATH
+    except (subprocess.SubprocessError, FileNotFoundError, PermissionError):
+        PIPELINE_PYTHON = Path(sys.executable)
+else:
+    PIPELINE_PYTHON = Path(sys.executable)
 
-NIBI_DATA_DIR   = f"{NIBI_SIM_DIR}/data"
+NIBI_DATA_DIR = f"{NIBI_SIM_DIR}/data"
+
 NIBI_RUN_ROOT   = f"{NIBI_SIM_DIR}/run_root"
 NIBI_SBATCH     = f"{NIBI_SIM_DIR}/ml/ml/nibi/simulate_full_day.sbatch"
 
@@ -386,9 +397,20 @@ def task_ensure_training_db_coverage(**ctx):
     from sqlalchemy import create_engine, text
 
     sim_date = dt.date.fromisoformat(ctx["ds"])
-    expected_dates = _expected_recent_trading_dates(sim_date, TRAINING_COVERAGE_LOOKBACK_TRADING_DAYS)
+    
+    # Only check coverage for dates strictly before today (local time) to avoid
+    # gather_past_data.py restrictions, which refuses to fetch data for "today".
+    # Today's data should be handled by the intraday pipeline.
+    tz = ZoneInfo("America/New_York")
+    now_local = dt.datetime.now(tz).date()
+    end_check_date = min(sim_date, now_local - dt.timedelta(days=1))
+    
+    expected_dates = _expected_recent_trading_dates(end_check_date, TRAINING_COVERAGE_LOOKBACK_TRADING_DAYS)
     if not expected_dates:
-        raise AirflowException(f"No expected trading dates found for sim_date={sim_date}")
+        print(f"No expected trading dates found before {now_local} (sim_date={sim_date}). Skipping coverage check.")
+        ctx["ti"].xcom_push(key="backfill_performed", value=False)
+        ctx["ti"].xcom_push(key="gap_dates", value=[])
+        return
 
     conn = psycopg2.connect(
         host=DB_HOST,
@@ -445,7 +467,7 @@ def task_ensure_training_db_coverage(**ctx):
     fetch_env.setdefault("DB_PASSWORD", DB_PASS)
 
     fetch_cmd = [
-        sys.executable,
+        str(PIPELINE_PYTHON),
         str(COLLECTOR_SRC / "gather_past_data.py"),
         "--from-date",
         gap_dates[0].isoformat(),

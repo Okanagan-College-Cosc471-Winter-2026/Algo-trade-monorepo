@@ -71,7 +71,7 @@ def log_api_error(
     tz: dt.tzinfo | None = None,
 ) -> None:
     """
-    Log API request errors to /usr/local/dc_error_logs/api_errors.csv
+    Log API request errors to LOG_DIR/api_errors.csv
     
     Args:
         symbol: Stock symbol being queried
@@ -103,7 +103,7 @@ def log_validation_error(
     tz: dt.tzinfo | None = None,
 ) -> None:
     """
-    Log data validation errors to /usr/local/dc_error_logs/data_errors.csv
+    Log data validation errors to LOG_DIR/data_errors.csv
     
     Args:
         symbol: Stock symbol
@@ -140,7 +140,7 @@ def log_db_error(
     tz: dt.tzinfo | None = None,
 ) -> None:
     """
-    Log database insertion/operation errors to /usr/local/dc_error_logs/db_insert_errors.csv
+    Log database insertion/operation errors to LOG_DIR/db_insert_errors.csv
     
     Args:
         symbol: Stock symbol being processed

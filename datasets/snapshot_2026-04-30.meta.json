@@ -1,0 +1,16 @@
+{
+  "cutoff_date": "2026-04-30",
+  "snapshot_path": "/data/projects/Algo-trade-monorepo/datasets/snapshot_2026-04-30.parquet",
+  "rows_total": 7072056,
+  "symbols_total": 504,
+  "max_window_ts_utc": "2026-05-01 14:15:00+00:00",
+  "cutoff_rows": 13180,
+  "cutoff_symbols": 504,
+  "cutoff_min_ts_utc": "2026-04-30 08:00:00+00:00",
+  "cutoff_max_ts_utc": "2026-04-30 23:45:00+00:00",
+  "open_bar_ts_utc": "2026-04-30 13:30:00+00:00",
+  "open_bar_symbols": 504,
+  "close_bar_ts_utc": "2026-04-30 19:30:00+00:00",
+  "close_bar_symbols": 504,
+  "validation_ok": true
+}

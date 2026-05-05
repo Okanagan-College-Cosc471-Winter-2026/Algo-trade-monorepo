@@ -67,7 +67,7 @@ def get_market_session_status(now: dt.datetime | None = None, market_tz_name: st
         )
 
     session_open_et, session_close_et = session
-    is_open_now = session_open_et <= now_et < session_close_et
+    is_open_now = session_open_et <= now_et <= session_close_et
     is_half_day = session_close_et.timetz().replace(tzinfo=None) < RTH_CLOSE
     reason = "open" if is_open_now else "outside_rth"
     return MarketSessionStatus(

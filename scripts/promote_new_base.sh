@@ -24,9 +24,9 @@ fi
 
 # ── Config ────────────────────────────────────────────────────────
 NIBI_ALIAS="nibi"
-NIBI_RUN_ROOT="~/projects/def-youry/test_simulation/run_root_apr21"
+NIBI_RUN_ROOT="~/projects/def-youry/test_simulation/run_root_base_apr21"
 ARTIFACTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../model_artifacts" && pwd)"
-BUNDLE_NAME="nibi_2026-04-21_apr8sim"
+BUNDLE_NAME="nibi_2026-04-22_base"
 LOCAL_BUNDLE="${ARTIFACTS_DIR}/${BUNDLE_NAME}"
 SYMLINK="${ARTIFACTS_DIR}/current_base"
 BACKUP="${ARTIFACTS_DIR}/backup_base"

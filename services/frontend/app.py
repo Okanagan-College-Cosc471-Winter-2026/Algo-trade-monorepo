@@ -1099,6 +1099,47 @@ def render_ops() -> None:
 
     st.divider()
 
+    # ══ 2b. Training Flow ════════════════════════════════════════
+    st.markdown("#### Training Flow")
+    flow = snap.get("training_flow", {})
+    if flow:
+        st.caption(
+            f"Cutoff {flow.get('cutoff_date') or '—'}  |  "
+            f"Sim date {flow.get('sim_date') or '—'}  |  "
+            f"Current stage {flow.get('current_stage') or '—'}"
+        )
+        if flow.get("message"):
+            st.caption(flow.get("message"))
+        stage_rows = []
+        for stage in flow.get("stages", []):
+            stage_rows.append({
+                "Stage": stage.get("label"),
+                "Status": stage.get("status", "not_started"),
+                "Detail": stage.get("detail", ""),
+            })
+        if stage_rows:
+            df_flow = pd.DataFrame(stage_rows)
+            st.dataframe(
+                df_flow,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Stage": st.column_config.TextColumn(width="medium"),
+                    "Status": st.column_config.TextColumn(width="small"),
+                    "Detail": st.column_config.TextColumn(width="large"),
+                },
+            )
+
+        snapshot = flow.get("snapshot") or {}
+        if snapshot:
+            f1, f2, f3, f4 = st.columns(4)
+            f1.metric("Snapshot Symbols", snapshot.get("cutoff_symbols") or "—")
+            f2.metric("Open Bar Symbols", snapshot.get("open_bar_symbols") or "—")
+            f3.metric("Close Bar Symbols", snapshot.get("close_bar_symbols") or "—")
+            f4.metric("Snapshot OK", "Yes" if snapshot.get("validation_ok") else "No")
+
+    st.divider()
+
     # ══ 3. Active Model ═══════════════════════════════════════════
     st.markdown("#### Active Model")
     m1, m2, m3, m4 = st.columns(4)

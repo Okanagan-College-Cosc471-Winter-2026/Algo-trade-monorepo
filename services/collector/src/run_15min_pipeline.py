@@ -18,7 +18,7 @@ Environment variables (same as intraday_data_collection.py):
     DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
     MARKET_TZ, MARKET_OPEN, MARKET_CLOSE
     FMP_API_KEY, SYMBOLS
-    LOG_DIR
+    LOG_DIR, INTRADAY_FRESHNESS_FILE (optional; defaults under repo logs/)
 """
 
 from __future__ import annotations
@@ -43,6 +43,8 @@ from utils.scheduled_pipeline import export_staging_to_core
 from utils.exchange_calendar import compute_last_closed_rth_window_start_utc
 
 load_dotenv()
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 
 LOG_DIR = Path(os.getenv("LOG_DIR", "./logs"))
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -250,7 +252,7 @@ def write_freshness_marker(window_ts: dt.datetime) -> None:
     marker_path = Path(
         os.getenv(
             "INTRADAY_FRESHNESS_FILE",
-            "/data/projects/Algo-trade-monorepo/logs/intraday_data_freshness.json",
+            str(_REPO_ROOT / "logs" / "intraday_data_freshness.json"),
         )
     )
     marker_path.parent.mkdir(parents=True, exist_ok=True)
