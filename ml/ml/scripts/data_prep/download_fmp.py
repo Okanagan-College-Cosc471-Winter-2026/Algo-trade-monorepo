@@ -4,22 +4,41 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import time
+from pathlib import Path
+from sqlalchemy import create_engine, text
 
-load_dotenv()
+# Use relative paths
+ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(ROOT / '.env')
 FMP_API_KEY = os.getenv("FMP_API_KEY")
 
 if not FMP_API_KEY:
     raise ValueError("Please set FMP_API_KEY in your .env file")
 
-TICKERS = ['AAPL', 'AMD', 'AMZN', 'BA', 'BABA', 'BAC', 'C', 'CSCO', 'CVX', 
-           'DIS', 'F', 'GE', 'GOOGL', 'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 
-           'MCD', 'META', 'MSFT', 'NFLX', 'NVDA', 'PFE', 'T', 'TSLA', 
-           'VZ', 'WMT', 'XOM']
+DB_USER = os.getenv("POSTGRES_USER", "appuser")
+DB_PASS = os.getenv("POSTGRES_PASSWORD", "changeme")
+DB_NAME = os.getenv("POSTGRES_DB", "algotrade")
+DB_HOST = os.getenv("POSTGRES_SERVER", "localhost")
+DB_PORT = os.getenv("POSTGRES_PORT", "5433")
+
+engine = create_engine(f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
+
+def get_active_tickers():
+    try:
+        with engine.connect() as conn:
+            res = conn.execute(text("SELECT symbol FROM market.stocks WHERE is_active = true ORDER BY symbol"))
+            return [row[0] for row in res]
+    except Exception as e:
+        print(f"Warning: Could not fetch tickers from DB: {e}. Falling back to default list.")
+        return ['AAPL', 'AMD', 'AMZN', 'BA', 'BABA', 'BAC', 'C', 'CSCO', 'CVX', 
+               'DIS', 'F', 'GE', 'GOOGL', 'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 
+               'MCD', 'META', 'MSFT', 'NFLX', 'NVDA', 'PFE', 'T', 'TSLA', 
+               'VZ', 'WMT', 'XOM']
 
 START_DATE = "2020-07-01"
 END_DATE = "2023-06-30"
 
-OUTPUT_DIR = "/home/cosc-admin/the-project-maverick/ml/data/fmp_historical_5min"
+OUTPUT_DIR = ROOT / "ml/data/fmp_historical_5min"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def download_fmp_data(ticker, start_date, end_date):
@@ -51,14 +70,13 @@ def download_fmp_data(ticker, start_date, end_date):
             
             if data:
                 df = pd.DataFrame(data)
-                df = df.rename(columns={"date": "date", "open": "open", "low": "low", "high": "high", "close": "close", "volume": "volume"})
-                df = df[['date', 'open', 'low', 'high', 'close', 'volume']]
-                all_data.append(df)
-            else:
-                pass
+                if not df.empty:
+                    df = df.rename(columns={"date": "date", "open": "open", "low": "low", "high": "high", "close": "close", "volume": "volume"})
+                    df = df[['date', 'open', 'low', 'high', 'close', 'volume']]
+                    all_data.append(df)
             
             # Be nice to the API
-            time.sleep(0.5)
+            time.sleep(0.35)
             
         except requests.exceptions.RequestException as e:
             print(f"  Error downloading chunk: {e}")
@@ -84,12 +102,13 @@ def download_fmp_data(ticker, start_date, end_date):
     return True
 
 def main():
+    tickers = get_active_tickers()
     success_count = 0
-    for ticker in TICKERS:
+    for ticker in tickers:
         if download_fmp_data(ticker, START_DATE, END_DATE):
             success_count += 1
             
-    print(f"\nDownload complete! Successfully downloaded data for {success_count}/{len(TICKERS)} tickers.")
+    print(f"\nDownload complete! Successfully downloaded data for {success_count}/{len(tickers)} tickers.")
 
 if __name__ == "__main__":
     main()

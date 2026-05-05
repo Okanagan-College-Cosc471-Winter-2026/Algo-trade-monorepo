@@ -12,6 +12,7 @@ Usage:
 import os
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -20,28 +21,22 @@ from sqlalchemy import create_engine, text
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = Path(__file__).resolve().parents[2]
 
-load_dotenv(os.path.join(ROOT, ".env"))          # DB creds (app DB)
-load_dotenv(os.path.join(ROOT, "ml", ".env"))    # FMP_API_KEY
+load_dotenv(ROOT / ".env")          # DB creds (app DB)
+load_dotenv(ROOT / "ml" / ".env")    # FMP_API_KEY
 
 FMP_API_KEY  = os.getenv("FMP_API_KEY")
-DB_USER      = os.getenv("POSTGRES_USER", "postgres")
-DB_PASS      = os.getenv("POSTGRES_PASSWORD", "changethis")
-DB_NAME      = os.getenv("POSTGRES_DB", "app")
-DB_HOST      = "localhost"
-DB_PORT      = 5432
-
-TICKERS = [
-    "AAPL","AMD","AMZN","BA","BABA","BAC","C","CSCO","CVX",
-    "DIS","F","GE","GOOGL","IBM","INTC","JNJ","JPM","KO",
-    "MCD","META","MSFT","NFLX","NVDA","PFE","T","TSLA","VZ","WMT","XOM",
-]
+DB_USER      = os.getenv("POSTGRES_USER", "appuser")
+DB_PASS      = os.getenv("POSTGRES_PASSWORD", "changeme")
+DB_NAME      = os.getenv("POSTGRES_DB", "algotrade")
+DB_HOST      = os.getenv("POSTGRES_SERVER", "localhost")
+DB_PORT      = os.getenv("POSTGRES_PORT", "5433")
 
 CHUNK_DAYS   = 25   # FMP max window per request
-SLEEP_S      = 0.5  # rate-limit delay between chunks
+SLEEP_S      = 0.35 # rate-limit delay between chunks
 
-CSV_DIR = os.path.join(ROOT, "ml", "data", "fmp_gap_fill")
+CSV_DIR = ROOT / "ml/data/fmp_gap_fill"
 os.makedirs(CSV_DIR, exist_ok=True)
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,19 +44,34 @@ os.makedirs(CSV_DIR, exist_ok=True)
 def get_engine():
     return create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
+def get_active_tickers(engine):
+    try:
+        with engine.connect() as conn:
+            res = conn.execute(text("SELECT symbol FROM market.stocks WHERE is_active = true ORDER BY symbol"))
+            return [row[0] for row in res]
+    except Exception as e:
+        print(f"Warning: Could not fetch tickers from DB: {e}. Falling back to default list.")
+        return [
+            "AAPL","AMD","AMZN","BA","BABA","BAC","C","CSCO","CVX",
+            "DIS","F","GE","GOOGL","IBM","INTC","JNJ","JPM","KO",
+            "MCD","META","MSFT","NFLX","NVDA","PFE","T","TSLA","VZ","WMT","XOM",
+        ]
 
 def get_max_date(engine, ticker: str) -> datetime | None:
     """Return the latest timestamp in market."{ticker}", or None if empty."""
-    with engine.connect() as conn:
-        row = conn.execute(
-            text(f'SELECT MAX(date) FROM market."{ticker}"')
-        ).one()
-    val = row[0]
-    if val is None:
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(
+                text(f'SELECT MAX(date) FROM market."{ticker}"')
+            ).one()
+        val = row[0]
+        if val is None:
+            return None
+        if isinstance(val, str):
+            return pd.to_datetime(val).to_pydatetime()
+        return val  # already datetime
+    except Exception:
         return None
-    if isinstance(val, str):
-        return pd.to_datetime(val).to_pydatetime()
-    return val  # already datetime
 
 
 def fetch_fmp(ticker: str, start: str, end: str) -> pd.DataFrame | None:
@@ -157,15 +167,16 @@ def main():
         raise ValueError("FMP_API_KEY not found in .env")
 
     engine = get_engine()
+    tickers = get_active_tickers(engine)
     today  = datetime.now()
     total  = 0
 
     print(f"Gap-fill run: target range ends {today.date()}\n")
 
-    for ticker in TICKERS:
+    for ticker in tickers:
         total += fill_ticker(engine, ticker, today)
 
-    print(f"\nDone — {total:,} rows inserted across {len(TICKERS)} tickers.")
+    print(f"\nDone — {total:,} rows inserted across {len(tickers)} tickers.")
 
 
 if __name__ == "__main__":

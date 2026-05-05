@@ -2,7 +2,7 @@
 fetch_sp500_data.py — Download 15-min extended-hours OHLCV data for all S&P 500 stocks.
 
 Two modes per ticker:
-  - Existing (29 stocks in final_data/): gap-fill from last date → 2026-03-23
+  - Existing (previously downloaded stocks in final_data/): gap-fill from last date → 2026-03-23
   - New stocks: full 2-year range 2024-03-23 → 2026-03-23
 
 Tracks every FMP API call in bandwidth_log.csv and bandwidth_summary.json.

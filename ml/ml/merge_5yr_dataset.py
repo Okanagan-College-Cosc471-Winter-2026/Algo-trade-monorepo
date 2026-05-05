@@ -1,43 +1,46 @@
 import pandas as pd
 import os
+from pathlib import Path
 
-TICKERS = ['AAPL', 'AMD', 'AMZN', 'BA', 'BABA', 'BAC', 'C', 'CSCO', 'CVX', 
-           'DIS', 'F', 'GE', 'GOOGL', 'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 
-           'MCD', 'META', 'MSFT', 'NFLX', 'NVDA', 'PFE', 'T', 'TSLA', 
-           'VZ', 'WMT', 'XOM']
-
-GAP_DIR = "/home/cosc-admin/the-project-maverick/ml/data/fmp_gap_2020_to_2023"
-GDRIVE_DIR = "/home/cosc-admin/the-project-maverick/ml/data/July 1, 2023 to Oct 24, 2025 /FMP API/29-stocks-5-min"
-OUT_DIR = "/home/cosc-admin/the-project-maverick/ml/data/fmp_historical_5min"
+# Use relative paths
+ROOT = Path(__file__).resolve().parents[1]
+GAP_DIR = ROOT / "ml/data/fmp_gap_2020_to_2023"
+GDRIVE_DIR = ROOT / "ml/data/July 1, 2023 to Oct 24, 2025 /FMP API/29-stocks-5-min"
+OUT_DIR = ROOT / "ml/data/fmp_historical_5min"
 
 os.makedirs(OUT_DIR, exist_ok=True)
 
+def get_tickers():
+    """Identify tickers by looking at available files in both source directories."""
+    tickers = set()
+    if GAP_DIR.exists():
+        tickers.update(p.stem for p in GAP_DIR.glob("*.csv"))
+    if GDRIVE_DIR.exists():
+        tickers.update(p.stem for p in GDRIVE_DIR.glob("*.csv"))
+    return sorted(list(tickers))
+
 def merge_datasets(ticker):
-    gap_path = os.path.join(GAP_DIR, f"{ticker}.csv")
-    gdrive_path = os.path.join(GDRIVE_DIR, f"{ticker}.csv")
-    out_path = os.path.join(OUT_DIR, f"{ticker}.csv")
+    gap_path = GAP_DIR / f"{ticker}.csv"
+    gdrive_path = GDRIVE_DIR / f"{ticker}.csv"
+    out_path = OUT_DIR / f"{ticker}.csv"
     
     dfs_to_concat = []
     
     # Load 2020-2023 Gap
-    if os.path.exists(gap_path):
+    if gap_path.exists():
         df_gap = pd.read_csv(gap_path)
         if not df_gap.empty and 'date' in df_gap.columns:
             df_gap['date'] = pd.to_datetime(df_gap['date'])
             dfs_to_concat.append(df_gap)
             print(f"[{ticker}] Loaded Gap 2020-2023: {len(df_gap)} rows")
-    else:
-        print(f"[{ticker}] WARNING: Gap file missing.")
-
+    
     # Load 2023-2025 GDrive Backup
-    if os.path.exists(gdrive_path):
+    if gdrive_path.exists():
         df_gdrive = pd.read_csv(gdrive_path)
         if not df_gdrive.empty and 'date' in df_gdrive.columns:
             df_gdrive['date'] = pd.to_datetime(df_gdrive['date'])
             dfs_to_concat.append(df_gdrive)
             print(f"[{ticker}] Loaded GDrive 2023-2025: {len(df_gdrive)} rows")
-    else:
-        print(f"[{ticker}] WARNING: GDrive backup file missing.")
         
     if not dfs_to_concat:
         print(f"[{ticker}] Error: No data found to merge.")
@@ -57,8 +60,9 @@ def merge_datasets(ticker):
     return True
 
 if __name__ == "__main__":
+    tickers = get_tickers()
     count = 0
-    for tick in TICKERS:
+    for tick in tickers:
         if merge_datasets(tick):
             count += 1
-    print(f"Successfully merged {count} / {len(TICKERS)} tickers into {OUT_DIR}.")
+    print(f"Successfully merged {count} / {len(tickers)} tickers into {OUT_DIR}.")

@@ -8,7 +8,7 @@ from airflow.providers.http.operators.http import SimpleHttpOperator
 # DAG: Daily Dataset Snapshot Builder
 #
 # Description: This DAG hits the FastAPI Backend nightly to re-build 
-#              the master Parquet dataset (containing all 29 tickers).
+#              the master Parquet dataset (containing all active tickers).
 # --------------------------------------------------------------------------------
 
 default_args = {

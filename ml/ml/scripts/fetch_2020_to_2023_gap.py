@@ -4,24 +4,42 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import time
+from pathlib import Path
+from sqlalchemy import create_engine, text
 
-load_dotenv('/home/cosc-admin/the-project-maverick/ml/.env')
+# Use relative paths
+ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(ROOT / '.env')
 FMP_API_KEY = os.getenv("FMP_API_KEY")
 
 if not FMP_API_KEY:
     raise ValueError("Please set FMP_API_KEY in your .env file")
 
-# All 29 Tickers from the dataset
-TICKERS = ['AAPL', 'AMD', 'AMZN', 'BA', 'BABA', 'BAC', 'C', 'CSCO', 'CVX', 
-           'DIS', 'F', 'GE', 'GOOGL', 'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 
-           'MCD', 'META', 'MSFT', 'NFLX', 'NVDA', 'PFE', 'T', 'TSLA', 
-           'VZ', 'WMT', 'XOM']
+DB_USER = os.getenv("POSTGRES_USER", "appuser")
+DB_PASS = os.getenv("POSTGRES_PASSWORD", "changeme")
+DB_NAME = os.getenv("POSTGRES_DB", "algotrade")
+DB_HOST = os.getenv("POSTGRES_SERVER", "localhost")
+DB_PORT = os.getenv("POSTGRES_PORT", "5433")
+
+engine = create_engine(f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
+
+def get_active_tickers():
+    try:
+        with engine.connect() as conn:
+            res = conn.execute(text("SELECT symbol FROM market.stocks WHERE is_active = true ORDER BY symbol"))
+            return [row[0] for row in res]
+    except Exception as e:
+        print(f"Warning: Could not fetch tickers from DB: {e}. Falling back to default list.")
+        return ['AAPL', 'AMD', 'AMZN', 'BA', 'BABA', 'BAC', 'C', 'CSCO', 'CVX', 
+               'DIS', 'F', 'GE', 'GOOGL', 'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 
+               'MCD', 'META', 'MSFT', 'NFLX', 'NVDA', 'PFE', 'T', 'TSLA', 
+               'VZ', 'WMT', 'XOM']
 
 # EXACT bounds of the missing gap for fmp_historical_5min extended hours
 START_DATE = "2020-07-17" 
 END_DATE = "2023-06-30"
 
-DATA_DIR = "/home/cosc-admin/the-project-maverick/ml/data/fmp_gap_2020_to_2023"
+DATA_DIR = ROOT / "ml/data/fmp_gap_2020_to_2023"
 os.makedirs(DATA_DIR, exist_ok=True)
 
 def fetch_fmp_window(ticker):
@@ -55,12 +73,13 @@ def fetch_fmp_window(ticker):
             
             if data:
                 df_chunk = pd.DataFrame(data)
-                df_chunk = df_chunk.rename(columns={"date": "date", "open": "open", "low": "low", "high": "high", "close": "close", "volume": "volume"})
-                df_chunk = df_chunk[['date', 'open', 'low', 'high', 'close', 'volume']]
-                df_chunk['date'] = pd.to_datetime(df_chunk['date'])
-                all_new_data.append(df_chunk)
+                if not df_chunk.empty:
+                    df_chunk = df_chunk.rename(columns={"date": "date", "open": "open", "low": "low", "high": "high", "close": "close", "volume": "volume"})
+                    df_chunk = df_chunk[['date', 'open', 'low', 'high', 'close', 'volume']]
+                    df_chunk['date'] = pd.to_datetime(df_chunk['date'])
+                    all_new_data.append(df_chunk)
             
-            time.sleep(0.5) # Prevent rate limiting
+            time.sleep(0.35) # Prevent rate limiting
             
         except requests.exceptions.RequestException as e:
             print(f"  Error downloading chunk: {e}")
@@ -84,8 +103,9 @@ def fetch_fmp_window(ticker):
 
 if __name__ == "__main__":
     print(f"Target directory: {DATA_DIR}")
+    tickers = get_active_tickers()
     count = 0
-    for tick in TICKERS:
+    for tick in tickers:
         if fetch_fmp_window(tick):
             count += 1
-    print(f"Done processing {count} / {len(TICKERS)} tickers.")
+    print(f"Done processing {count} / {len(tickers)} tickers.")
