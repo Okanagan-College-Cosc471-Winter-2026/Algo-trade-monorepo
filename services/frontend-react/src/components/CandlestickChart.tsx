@@ -42,8 +42,14 @@ export const CandlestickChart: React.FC<CandlestickChartProps> = ({
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
+    const el = chartContainerRef.current;
+    const layoutSize = () => ({
+      width: el.clientWidth,
+      height: Math.max(200, el.clientHeight || height),
+    });
+    const initial = layoutSize();
 
-    const chart = createChart(chartContainerRef.current, {
+    const chart = createChart(el, {
       layout: {
         background: { type: ColorType.Solid, color: 'white' },
         textColor: '#334155',
@@ -52,8 +58,8 @@ export const CandlestickChart: React.FC<CandlestickChartProps> = ({
         vertLines: { color: '#f1f5f9' },
         horzLines: { color: '#f1f5f9' },
       },
-      width: chartContainerRef.current.clientWidth,
-      height: height,
+      width: initial.width,
+      height: initial.height,
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
@@ -71,19 +77,23 @@ export const CandlestickChart: React.FC<CandlestickChartProps> = ({
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
 
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      }
+    const applyLayout = () => {
+      if (!chartContainerRef.current || !chartRef.current) return;
+      const { width, height: h } = layoutSize();
+      chartRef.current.applyOptions({ width, height: h });
     };
 
-    window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(() => applyLayout());
+    ro.observe(el);
+
+    window.addEventListener('resize', applyLayout);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', applyLayout);
+      ro.disconnect();
       chart.remove();
     };
-  }, [height]);
+  }, []);
 
   useEffect(() => {
     if (candlestickSeriesRef.current && data.length > 0) {
@@ -126,7 +136,7 @@ export const CandlestickChart: React.FC<CandlestickChartProps> = ({
         warmSeriesRef.current = chartRef.current.addLineSeries({
           color: '#3b82f6',
           lineWidth: 2,
-          lineStyle: 1, // Dashed
+          lineStyle: 0, // Solid
           title: 'Warm Forecast',
         });
       }
