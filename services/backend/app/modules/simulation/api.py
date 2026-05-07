@@ -178,26 +178,44 @@ def get_simulation_ohlc(
 
     trade_date = date or simulation_loader.replay_date
 
-    rows = session.execute(
-        text(
-            """
-            SELECT
-                window_ts,
-                open::float,
-                high::float,
-                low::float,
-                close::float,
-                volume::bigint
-            FROM ml.market_data_15m
-            WHERE symbol = :symbol
-              AND trade_date = :trade_date
-              AND (window_ts AT TIME ZONE 'America/New_York')::time >= TIME '09:30'
-              AND (window_ts AT TIME ZONE 'America/New_York')::time <= TIME '15:45'
-            ORDER BY window_ts ASC
-            """
-        ),
-        {"symbol": symbol.upper(), "trade_date": trade_date},
-    ).fetchall()
+    def _fetch(td: str):
+        return session.execute(
+            text(
+                """
+                SELECT
+                    window_ts,
+                    open::float,
+                    high::float,
+                    low::float,
+                    close::float,
+                    volume::bigint
+                FROM ml.market_data_15m
+                WHERE symbol = :symbol
+                  AND trade_date = :trade_date
+                  AND (window_ts AT TIME ZONE 'America/New_York')::time >= TIME '09:30'
+                  AND (window_ts AT TIME ZONE 'America/New_York')::time <= TIME '15:45'
+                ORDER BY window_ts ASC
+                """
+            ),
+            {"symbol": symbol.upper(), "trade_date": td},
+        ).fetchall()
+
+    rows = _fetch(trade_date)
+    # If a specific date was requested but has no data, fall back to the most recent date with data
+    if not rows and date:
+        fallback_row = session.execute(
+            text(
+                """
+                SELECT MAX(trade_date)::text AS latest_date
+                FROM ml.market_data_15m
+                WHERE symbol = :symbol
+                  AND trade_date <= :trade_date
+                """
+            ),
+            {"symbol": symbol.upper(), "trade_date": trade_date},
+        ).fetchone()
+        if fallback_row and fallback_row.latest_date:
+            rows = _fetch(fallback_row.latest_date)
 
     return [
         {

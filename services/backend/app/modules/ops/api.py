@@ -145,10 +145,17 @@ def _active_model_info() -> dict:
         if meta_path.exists():
             try:
                 m = json.loads(meta_path.read_text())
-                info["n_estimators"]   = m.get("n_estimators") or m.get("base_trees")
-                info["train_end_date"] = m.get("train_end_date") or m.get("cutoff")
+                # Support both old flat format and new nested hyperparameters format
+                hp = m.get("hyperparameters", {})
+                info["n_estimators"]   = (m.get("n_estimators") or m.get("base_trees")
+                                          or hp.get("n_estimators"))
+                info["train_end_date"] = (m.get("train_end_date") or m.get("cutoff")
+                                          or m.get("effective_as_of_date")
+                                          or m.get("load_end_date"))
                 info["model_type"]     = m.get("model_type")
                 info["warm_trees_per_step"] = m.get("warm_trees_per_step")
+                info["promoted_at"]    = m.get("promoted_at") or m.get("last_promoted_at")
+                info["model_id"]       = m.get("model_id")
             except Exception:
                 pass
             break
@@ -650,22 +657,25 @@ def get_ops_status(db: Session = Depends(get_db)) -> dict:
     any_running = any(str(j.get("state", "")).upper() == "RUNNING" for j in nibi_jobs.get("queued", []))
     nibi_gpu = _nibi_gpu_info(ssh_alive) if any_running else None
 
-    # 5b. End-to-end training flow snapshot + normalized job card
-    job_file = _nibi_job_info()
-    flow_info = _base_only_flow_info()
-    training_flow = _build_training_flow(ssh_alive, job_file, live_primary, model)
-    job = _resolve_nibi_job_card(job_file, flow_info, live_primary)
-
-    # 6. Data freshness
+    # 6. Data freshness (computed first so latest_data_date is available for training flow)
     freshness: dict[str, Any] = {}
+    latest_data_date: str | None = None
     try:
         row = db.execute(text(
             "SELECT MAX(window_ts) AS last_ts, COUNT(*) AS total_rows "
             "FROM ml.market_data_15m"
         )).mappings().one()
         freshness = _compute_freshness(row["last_ts"], int(row["total_rows"]), now)
+        if row["last_ts"] is not None:
+            latest_data_date = row["last_ts"].strftime("%Y-%m-%d")
     except Exception as exc:
         freshness = {"error": str(exc)}
+
+    # 5b. End-to-end training flow snapshot + normalized job card
+    job_file = _nibi_job_info()
+    flow_info = _base_only_flow_info()
+    training_flow = _build_training_flow(ssh_alive, job_file, live_primary, model, latest_data_date)
+    job = _resolve_nibi_job_card(job_file, flow_info, live_primary)
 
     # 7. Collector last run (from operation_logs.pipeline_logs)
     collector: dict[str, Any] = {}

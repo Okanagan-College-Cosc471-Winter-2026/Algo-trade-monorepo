@@ -1,158 +1,73 @@
-.container {
-  padding: 1rem 0;
+/* Full-viewport no-scroll layout */
+.page {
+  display: flex;
+  height: calc(100vh - 3rem); /* subtract Layout's 1.5rem top + bottom padding */
+  gap: 1rem;
+  overflow: hidden;
+}
+
+/* ── Left column: header + metrics + chart ── */
+.leftCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  flex-shrink: 0;
 }
 
 .titleGroup {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
 }
 
 .titleGroup h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: #0f172a;
 }
 
-.symbolSelect {
-  padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background-color: white;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #334155;
-  cursor: pointer;
-}
-
-.modeToggle {
-  display: flex;
-  background-color: #f1f5f9;
-  padding: 0.25rem;
-  border-radius: 6px;
-}
-
-.modeToggle button {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #64748b;
-  border: none;
-  background: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.activeMode {
-  background-color: white !important;
-  color: #0284c7 !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.metricsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.sliderSection {
-  background-color: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.sliderHeader {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #475569;
-}
-
-.slider {
-  width: 100%;
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 3px;
-  outline: none;
-  cursor: pointer;
-}
-
-.symbolStatus {
-  font-size: 0.95rem;
-  color: #64748b;
-}
-
-.symbolError {
-  font-size: 0.875rem;
-  color: #b91c1c;
-  max-width: min(520px, 90vw);
-}
-
-.symbolError code {
-  font-size: 0.8em;
-}
-
-.keyboardHint {
-  margin-top: 0.75rem;
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-.keyboardHint kbd {
-  display: inline-block;
-  padding: 0.1rem 0.35rem;
-  margin: 0 0.1rem;
-  font-family: ui-monospace, monospace;
+.replayBadge {
   font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
   background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
   border-radius: 4px;
-}
-
-.chartWrapper {
-  width: 100%;
-  min-height: min(78vh, 960px);
-  height: min(78vh, 960px);
+  padding: 0.15rem 0.5rem;
+  letter-spacing: 0.03em;
 }
 
 .liveTag {
-  margin-left: 0.75rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #16a34a;
   letter-spacing: 0.05em;
-  vertical-align: middle;
 }
 
-.liveBtn {
-  margin-left: 0.75rem;
-  padding: 0.15rem 0.6rem;
-  font-size: 0.75rem;
+.symbolSelect {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #0284c7;
-  background: #e0f2fe;
-  border: 1px solid #7dd3fc;
-  border-radius: 4px;
+  color: #334155;
   cursor: pointer;
 }
 
 .legend {
   display: flex;
   gap: 1rem;
-  font-size: 0.78rem;
+  font-size: 0.73rem;
   align-items: center;
 }
 
@@ -166,23 +81,144 @@
   font-weight: 600;
 }
 
-.timeDisplay {
-  font-size: 0.9rem;
-  color: #334155;
-  font-weight: 500;
+.symbolStatus {
+  font-size: 0.85rem;
+  color: #64748b;
 }
 
-.timeLabels {
+.symbolError {
+  font-size: 0.8rem;
+  color: #b91c1c;
+}
+
+/* Metrics: compact single row */
+.metricsRow {
   display: flex;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  color: #94a3b8;
-  margin-top: 0.5rem;
-  padding: 0 0.25rem;
+  gap: 0.6rem;
+  flex-shrink: 0;
 }
 
-.timeLabel {
+.metricsRow > * {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Chart fills all remaining height */
+.chartArea {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Right column: vertical slider ── */
+.rightCol {
+  width: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.25rem 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  gap: 0.4rem;
+}
+
+.timeHeader {
+  flex-shrink: 0;
   text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
   line-height: 1.3;
-  font-weight: 500;
+}
+
+.currentTime {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: block;
+}
+
+.liveBtn {
+  display: block;
+  margin: 0.15rem auto 0;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #0284c7;
+  background: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Vertical slider track area */
+.sliderTrack {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0.25rem 0;
+  position: relative;
+}
+
+.timeTickTop,
+.timeTickBottom {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  font-weight: 600;
+  flex-shrink: 0;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Grow spacer to center the slider */
+.sliderGrow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Vertical range input — min (9:30) at top, max (15:45) at bottom */
+.sliderVertical {
+  writing-mode: vertical-lr;
+  width: 6px;
+  height: 100%;
+  min-height: 80px;
+  cursor: pointer;
+  outline: none;
+  accent-color: #0284c7;
+}
+
+.keyboardHint {
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.keyboardHint kbd {
+  display: inline-block;
+  padding: 0 0.2rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.6rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+}
+
+/* Step label strip */
+.stepLabel {
+  font-size: 0.65rem;
+  color: #64748b;
+  text-align: center;
+  flex-shrink: 0;
 }
