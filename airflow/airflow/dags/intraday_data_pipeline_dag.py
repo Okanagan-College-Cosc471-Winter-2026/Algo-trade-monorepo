@@ -19,7 +19,7 @@ from market_calendar_utils import expected_last_closed_window_start_utc
 
 import sys
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path("/data/projects/Algo-trade-monorepo")
 PIPELINE_SCRIPT = REPO_ROOT / "services" / "collector" / "src" / "run_15min_pipeline.py"
 PIPELINE_PYTHON_PATH = REPO_ROOT / "pipeline-venv" / "bin" / "python"
 if PIPELINE_PYTHON_PATH.exists():

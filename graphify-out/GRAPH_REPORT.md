@@ -1,11 +1,11 @@
-# Graph Report - /data/projects/Algo-trade-monorepo  (2026-05-05)
+# Graph Report - .  (2026-05-06)
 
 ## Corpus Check
-- 165 files · ~143,253 words
+- 166 files · ~149,811 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1582 nodes · 2846 edges · 181 communities detected
+- 1602 nodes · 2867 edges · 186 communities detected
 - Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 174 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
@@ -191,6 +191,11 @@
 - [[_COMMUNITY_Community 178|Community 178]]
 - [[_COMMUNITY_Community 179|Community 179]]
 - [[_COMMUNITY_Community 180|Community 180]]
+- [[_COMMUNITY_Community 181|Community 181]]
+- [[_COMMUNITY_Community 182|Community 182]]
+- [[_COMMUNITY_Community 183|Community 183]]
+- [[_COMMUNITY_Community 184|Community 184]]
+- [[_COMMUNITY_Community 185|Community 185]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `replay_intraday()` - 26 edges
@@ -220,7 +225,7 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (97): ABC, _broadcast(), get_base_prediction(), get_coverage(), get_session_info(), get_simulation_history(), get_simulation_ohlc(), get_simulation_symbols() (+89 more)
+Nodes (108): Base, _coerce_float(), _construct_source_url(), _fetch_api_data(), _insert_batch(), _process_data_batch(), Shared collector helpers for market data ingestion scripts.  This module central, Construct the source URL for a given symbol and date range. (+100 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.06
@@ -231,48 +236,48 @@ Cohesion: 0.06
 Nodes (104): add_group_rolling_features_by_keys(), align_features_for_inference(), build_cutoff_replay_dataset(), build_next_session_targets(), build_replay_prediction_frames(), build_symbol_day_dataset(), canonical_mode(), clip_bars_to_requested_as_of() (+96 more)
 
 ### Community 3 - "Community 3"
+Cohesion: 0.04
+Nodes (85): ABC, get_base_prediction(), get_coverage(), get_session_info(), get_simulation_history(), get_simulation_ohlc(), get_simulation_symbols(), get_step_prediction() (+77 more)
+
+### Community 4 - "Community 4"
 Cohesion: 0.06
 Nodes (92): add_group_rolling_features(), add_group_rolling_features_by_keys(), align_features_for_inference(), build_cutoff_replay_dataset(), build_replay_prediction_frames(), build_symbol_day_dataset(), canonical_mode(), compute_replay_metrics() (+84 more)
 
-### Community 4 - "Community 4"
-Cohesion: 0.05
-Nodes (56): Base, _coerce_float(), _construct_source_url(), _fetch_api_data(), _insert_batch(), _process_data_batch(), Shared collector helpers for market data ingestion scripts.  This module central, Construct the source URL for a given symbol and date range. (+48 more)
-
 ### Community 5 - "Community 5"
-Cohesion: 0.07
-Nodes (52): PipelineLog, _allow_symbol_subset(), build_engine(), check_latest_5m_bar(), LatestBarGate, log_pipeline(), main(), Export validated rows from stg_raw → core_dbms.market_data_5m. (+44 more)
+Cohesion: 0.06
+Nodes (52): _active_model_info(), _airflow_status(), _base_only_flow_info(), _build_training_flow(), _compute_freshness(), _cpu_model(), get_airflow_status(), get_data_freshness() (+44 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.06
-Nodes (51): _active_model_info(), _airflow_status(), _base_only_flow_info(), _build_training_flow(), _compute_freshness(), _cpu_model(), get_airflow_status(), get_data_freshness() (+43 more)
-
-### Community 7 - "Community 7"
-Cohesion: 0.06
-Nodes (41): BaseSensorOperator, _atomic_symlink(), _expected_recent_trading_dates(), _load_training_coverage(), _next_trading_day(), NibiBaseJobSensor, nibi_base_only_training_dag.py ==============================  Base-only NIBI tr, _ssh() (+33 more)
-
-### Community 8 - "Community 8"
 Cohesion: 0.08
 Nodes (41): build_snapshot(), download_snapshot(), ensure_snapshot_dir(), get_all_tables(), get_db_engine(), get_ohlc(), get_stock(), health_check() (+33 more)
 
-### Community 9 - "Community 9"
+### Community 7 - "Community 7"
 Cohesion: 0.11
 Nodes (39): append_filtered_rows_report(), apply_massive_fallback(), apply_simple_fmp_resume(), build_massive_url(), build_reference_schedule(), build_session(), build_upsert_rows(), determine_effective_chunk_days() (+31 more)
 
-### Community 10 - "Community 10"
+### Community 8 - "Community 8"
+Cohesion: 0.08
+Nodes (25): BaseSensorOperator, _atomic_symlink(), _expected_recent_trading_dates(), _load_training_coverage(), _next_trading_day(), NibiBaseJobSensor, nibi_base_only_training_dag.py ==============================  Base-only NIBI tr, _ssh() (+17 more)
+
+### Community 9 - "Community 9"
 Cohesion: 0.12
 Nodes (34): ApiError, build_price_chart(), build_sidebar(), build_sim_chart(), load_ohlc(), load_sim_base(), load_sim_history(), load_sim_ohlc() (+26 more)
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
 Cohesion: 0.11
 Nodes (24): _atomic_symlink(), _collector_import_path(), _expected_recent_trading_dates(), _export_staging_backfill_to_core(), _iter_backfill_slots_utc(), _load_training_coverage(), NibiJobSensor, nibi_daily_training_dag.py ==========================  Daily NIBI warm-refresh p (+16 more)
 
+### Community 11 - "Community 11"
+Cohesion: 0.09
+Nodes (24): _atomic_symlink(), nibi_intraday_warmrefresh_dag.py =================================  Intraday war, Run a command on NIBI via the existing ControlMaster socket., Atomically replace a symlink via Linux rename() — never leaves it dangling., Skip (not fail) if called outside the regular NYSE session.      The cron schedu, Export the latest SNAPSHOT_TRADING_DAYS of ml.market_data_15m to parquet.      R, SCP the snapshot parquet to NIBI, skipping if sizes already match., Submit sim_warm_windows.sbatch with --skip-base.      Uses an Airflow Variable " (+16 more)
+
 ### Community 12 - "Community 12"
-Cohesion: 0.15
-Nodes (16): BandwidthTracker, detect_gap(), fetch_sp500_tickers(), fetch_ticker_chunks(), is_done(), load_progress(), main(), parse_args() (+8 more)
+Cohesion: 0.09
+Nodes (12): _artifacts_root(), _load_step_csv(), _normalize_sim_summary(), Simulation loader — reads and caches pre-computed prediction CSVs and replay met, Return the step_00 row for a symbol (used as base-model view)., Return (predictions row, step_info dict) for a symbol at a given step., Return all symbols for a step, sorted by predicted_full_day_return descending., Re-initialise from disk — picks up a newly promoted current_simulation symlink. (+4 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.09
-Nodes (10): _artifacts_root(), _load_step_csv(), Simulation loader — reads and caches pre-computed prediction CSVs and replay met, Return the step_00 row for a symbol (used as base-model view)., Return (predictions row, step_info dict) for a symbol at a given step., Return all symbols for a step, sorted by predicted_full_day_return descending., Re-initialise from disk — picks up a newly promoted current_simulation symlink., Prefer the Docker-mounted host artifacts directory when present.      In local d (+2 more)
+Cohesion: 0.15
+Nodes (16): BandwidthTracker, detect_gap(), fetch_sp500_tickers(), fetch_ticker_chunks(), is_done(), load_progress(), main(), parse_args() (+8 more)
 
 ### Community 14 - "Community 14"
 Cohesion: 0.2
@@ -319,212 +324,212 @@ Cohesion: 0.17
 Nodes (15): add_group_rolling_features_by_keys(), _build_daily_features(), calculate_technical_indicators(), derive_market_features(), prepare_features_for_next_day(), prepare_features_for_prediction(), prepare_production_features(), Feature engineering for stock prediction inference.  Calculates the exact featur (+7 more)
 
 ### Community 25 - "Community 25"
+Cohesion: 0.19
+Nodes (11): _broadcast(), JobStart, LogLine, _make_entry(), _now_utc(), push_log(), Receive a single log line from train_model.py and broadcast to all SSE clients., SSE endpoint. Replays full buffer to reconnecting clients, then streams live. (+3 more)
+
+### Community 26 - "Community 26"
 Cohesion: 0.18
 Nodes (12): get_active_stocks(), get_coverage(), get_ohlc(), get_recent_inference_bars(), get_stock(), Market module database queries.  Stock metadata is sourced from market.stocks (s, Return recent 15-min OHLC data for a symbol from ml.market_data_15m, oldest firs, Return all active stocks from market.stocks, ordered by symbol. (+4 more)
 
-### Community 26 - "Community 26"
+### Community 27 - "Community 27"
 Cohesion: 0.17
 Nodes (6): TEST 00 — DB Schema Bootstrap ────────────────────────────── Verifies that all s, TestColumns, TestProcedures, TestSchemas, TestTables, TestViews
 
-### Community 27 - "Community 27"
+### Community 28 - "Community 28"
 Cohesion: 0.24
 Nodes (11): _ensure_schemas_and_views(), init(), main(), Startup bootstrap for the backend service.  Called by prestart.sh immediately af, Assert market.stocks is non-empty.      Raises RuntimeError on failure so presta, Warn if bridge views created by db/init/06_bridge_views.sql are absent., Idempotent seed of market.stocks and market.daily_prices.      Delegates to scri, Insert tracked symbols into staging.ingestion_progress if absent.      dw.proces (+3 more)
 
-### Community 28 - "Community 28"
+### Community 29 - "Community 29"
 Cohesion: 0.36
 Nodes (11): check_nibi(), export_parquet(), main(), Rsync pre-trained base model to NIBI. Used when skipping base training., rsync_to(), save_job_record(), scp_to(), send_to_nibi() (+3 more)
 
-### Community 29 - "Community 29"
+### Community 30 - "Community 30"
 Cohesion: 0.17
 Nodes (11): _build_insert_statement(), _build_upsert_statement(), check_table_exists(), db_connect(), Database utilities for stock data collection. Handles connection management, tab, Build the INSERT statement for stock data.          Args:         table: raw sta, Convert a stock symbol to a safe PostgreSQL table name.          Strips non-alph, Create a PostgreSQL database connection.          Args:         host: Database h (+3 more)
 
-### Community 30 - "Community 30"
+### Community 31 - "Community 31"
 Cohesion: 0.23
 Nodes (11): _ensure_log_file(), log_api_error(), log_db_error(), log_validation_error(), Error logging utilities for stock data collection pipeline. Handles three types, Log data validation errors to /usr/local/dc_error_logs/data_errors.csv, Log database insertion/operation errors to /usr/local/dc_error_logs/db_insert_er, Ensure the log directory exists and is writable.          Args:         log_dir: (+3 more)
 
-### Community 31 - "Community 31"
+### Community 32 - "Community 32"
 Cohesion: 0.22
 Nodes (7): cleanup(), purge_test_rows(), TEST 02 — Stage 2: Export stg_raw → core_dbms.market_data_5m ───────────────────, Re-running export on already-exported rows should not add duplicates., A bar with close=0 should be rejected to data_quality_errors, not core., seed_stg_raw(), TestExportStagingToCore
 
-### Community 32 - "Community 32"
+### Community 33 - "Community 33"
 Cohesion: 0.29
 Nodes (10): get_engine(), load_symbols(), main(), Export validated rows from stg_raw -> core_dbms.market_data_5m., Re-run dw.process_15min_window for every 15-min slot on trading dates., Return comma-separated list of all active symbols from market.stocks., Fetch 5-min bars for all symbols for the backfill range., step1_fetch() (+2 more)
 
-### Community 33 - "Community 33"
+### Community 34 - "Community 34"
 Cohesion: 0.27
 Nodes (10): fetch_fmp(), fill_ticker(), get_active_tickers(), get_engine(), get_max_date(), main(), fill_gap.py — Fetch missing 5-min OHLCV data from FMP and append to Postgres.  F, Return the latest timestamp in market."{ticker}", or None if empty. (+2 more)
 
-### Community 34 - "Community 34"
+### Community 35 - "Community 35"
 Cohesion: 0.22
 Nodes (4): BaseSettings, _enforce_non_default_secrets(), get_settings(), Settings
 
-### Community 35 - "Community 35"
+### Community 36 - "Community 36"
 Cohesion: 0.2
 Nodes (9): check_db_connection(), Market Data Seeding DAG ========================  Refreshes the market schema wi, Task 3: Import and execute the existing seed_market.main().      How this works:, Task 4: Verify the seed produced correct data.      Checks:         - Exactly 5, Task 1: Verify Postgres is alive and the market schema exists.      Why this mat, Task 2: Clear existing market data for a clean re-seed.      Why truncate instea, seed_stocks_and_prices(), truncate_old_data() (+1 more)
 
-### Community 36 - "Community 36"
+### Community 37 - "Community 37"
 Cohesion: 0.2
 Nodes (9): backup_artifacts(), evaluate_model(), ML Model Retraining DAG ========================  Retrains the global XGBoost st, Task 2: Run the existing XGBoost training script.      The script lives at ml/sc, Task 3: Smoke-test the trained model.      In a production ML system, this step, Task 4: Create a timestamped backup of model files.      Why?         If next we, Task 1: Gate check — is the data good enough to train on?      This is a best pr, train_model() (+1 more)
 
-### Community 37 - "Community 37"
+### Community 38 - "Community 38"
 Cohesion: 0.38
 Nodes (9): _build_payload(), _build_runtime_engine(), main(), _normalize_headers(), _parse_args(), _parse_csv_timestamp(), _parse_decimal(), _read_csv_payloads() (+1 more)
 
-### Community 38 - "Community 38"
+### Community 39 - "Community 39"
 Cohesion: 0.31
 Nodes (5): cleanup(), insert_bar(), TEST 01 — Stage 1: Raw Ingest → stg_raw.market_data ────────────────────────────, Remove test rows before and after each test., TestStgRawIngest
 
-### Community 39 - "Community 39"
+### Community 40 - "Community 40"
 Cohesion: 0.25
 Nodes (6): db_session(), Shared fixtures for the algo-trade integration test suite.  All tests connect to, Per-test session that rolls back after the test., Plain psycopg2 connection for direct SQL assertions., raw_conn(), session_factory()
 
-### Community 40 - "Community 40"
+### Community 41 - "Community 41"
 Cohesion: 0.33
 Nodes (8): create_features(), get_all_stocks(), get_db_engine(), load_stock_data(), main(), Get list of all stock symbols from the unified stocks table., Load stock data from the unified daily_prices table., Generate technical indicators and targets efficiently.     converts types to flo
 
-### Community 41 - "Community 41"
+### Community 42 - "Community 42"
 Cohesion: 0.39
 Nodes (7): get_totp_code(), main(), Return True if ControlMaster socket is already alive., Generate current TOTP code from secret (requires pyotp)., Drive the interactive SSH session using pexpect.     Handles:       - Password p, run_login(), socket_alive()
 
-### Community 42 - "Community 42"
+### Community 43 - "Community 43"
 Cohesion: 0.43
 Nodes (7): build_windows(), main(), parse_args(), Copy run_root/current/ → run_root/step_XX/ for retrieval by VM., slice_parquet(), snapshot_current(), write_progress()
 
-### Community 43 - "Community 43"
+### Community 44 - "Community 44"
 Cohesion: 0.36
 Nodes (7): create_technical_features(), get_db_engine(), load_stock_data(), main(), Create SQLAlchemy engine for PostgreSQL connection., Load stock data from PostgreSQL database., Create technical indicator features from OHLCV data.
 
-### Community 44 - "Community 44"
+### Community 45 - "Community 45"
 Cohesion: 0.43
 Nodes (7): clean(), create_features(), log(), main(), _post(), Silent fire-and-forget POST — never crashes the training script., Print locally AND stream to VPS frontend.
 
-### Community 45 - "Community 45"
+### Community 46 - "Community 46"
 Cohesion: 0.25
 Nodes (7): greet(), Hello Airflow — Educational Starter DAG ========================================, Pull the value that task_hello pushed into XCom.          xcom_pull() parameters, Show metadata about this DAG run., A simple Python function executed as an Airflow task.          The **context dic, read_xcom(), summarize()
 
-### Community 46 - "Community 46"
+### Community 47 - "Community 47"
 Cohesion: 0.48
 Nodes (6): create_features(), get_all_tables(), get_db_engine(), load_stock_data(), main(), Generate features with market-relative indicators.
 
-### Community 47 - "Community 47"
+### Community 48 - "Community 48"
 Cohesion: 0.38
 Nodes (5): build_postgres_url(), ensure_schemas(), get_engine(), init_db(), Database Connection & Initialization  Purpose:     Manage SQLAlchemy engine crea
 
-### Community 48 - "Community 48"
+### Community 49 - "Community 49"
 Cohesion: 0.48
 Nodes (6): compute_last_closed_rth_window_start_utc(), get_market_session_status(), MarketSessionStatus, NYSE session utilities backed by exchange_calendars (XNYS)., _session_for_date(), _to_et()
 
-### Community 49 - "Community 49"
+### Community 50 - "Community 50"
 Cohesion: 0.6
 Nodes (5): build_engine(), extract(), main(), print_scp_command(), save_parquet()
 
-### Community 50 - "Community 50"
+### Community 51 - "Community 51"
 Cohesion: 0.6
 Nodes (5): ensure_table(), load_files(), main(), parse_args(), resolve_files()
 
-### Community 51 - "Community 51"
+### Community 52 - "Community 52"
 Cohesion: 0.53
 Nodes (5): create_features_inference(), get_db_engine(), load_recent_data(), main(), Generate features for the latest data points.
 
-### Community 52 - "Community 52"
+### Community 53 - "Community 53"
 Cohesion: 0.4
 Nodes (5): analyze_row(), is_empty(), Data validation utilities. Analyzes row completeness and identifies missing fiel, Check if a value is None or an empty string., Analyze a data row for missing or empty fields.          Args:         row: Dict
 
-### Community 53 - "Community 53"
+### Community 54 - "Community 54"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 54 - "Community 54"
+### Community 55 - "Community 55"
 Cohesion: 0.6
 Nodes (4): fetch_daily(), insert_batch(), main(), Replace synthetic market.daily_prices with real FMP historical daily OHLC.  Step
 
-### Community 55 - "Community 55"
+### Community 56 - "Community 56"
 Cohesion: 0.7
 Nodes (4): load_parquet(), main(), seed_ingestion_progress(), seed_market_stocks()
 
-### Community 56 - "Community 56"
+### Community 57 - "Community 57"
 Cohesion: 0.6
 Nodes (4): fetch_profile(), get_symbols(), main(), Backfill market.stocks with real metadata from FMP /api/v3/profile/{symbol}.  Up
 
-### Community 57 - "Community 57"
+### Community 58 - "Community 58"
 Cohesion: 0.7
 Nodes (4): build_windows(), main(), parse_args(), save_predictions()
 
-### Community 58 - "Community 58"
+### Community 59 - "Community 59"
 Cohesion: 0.4
 Nodes (2): create_features(), Generate extensive technical indicators and targets.
 
-### Community 59 - "Community 59"
+### Community 60 - "Community 60"
 Cohesion: 0.6
 Nodes (4): download_fmp_data(), get_active_tickers(), main(), Download 5-minute data from FMP API in chunks.
 
-### Community 60 - "Community 60"
+### Community 61 - "Community 61"
 Cohesion: 0.4
 Nodes (4): process_and_merge_data(), Merges 2020-2023 (FMP) and 2023-2025 (Drive) data into single Parquet files per, Starts a simple HTTP server in a specific directory., start_http_server()
 
-### Community 61 - "Community 61"
+### Community 62 - "Community 62"
 Cohesion: 0.7
 Nodes (4): extract_ticker(), get_all_tickers(), get_engine(), main()
 
-### Community 62 - "Community 62"
+### Community 63 - "Community 63"
 Cohesion: 0.7
 Nodes (4): _calendar(), expected_last_closed_window_start_utc(), get_session_gate(), SessionGate
 
-### Community 63 - "Community 63"
+### Community 64 - "Community 64"
 Cohesion: 0.5
 Nodes (3): _bundle_ready(), nibi_base_fallback_dag.py =========================  Weekday fallback guard for, task_check_base_bundle()
 
-### Community 64 - "Community 64"
+### Community 65 - "Community 65"
 Cohesion: 0.5
 Nodes (1): TEST 03 — Collector import regression ───────────────────────────────────── Prot
 
-### Community 65 - "Community 65"
+### Community 66 - "Community 66"
 Cohesion: 0.67
 Nodes (2): get_engine(), step3_aggregate()
 
-### Community 66 - "Community 66"
+### Community 67 - "Community 67"
 Cohesion: 0.5
 Nodes (2): get_tickers(), Identify tickers by looking at available files in both source directories.
 
-### Community 67 - "Community 67"
+### Community 68 - "Community 68"
 Cohesion: 0.67
 Nodes (3): Airflow-owned intraday data pipeline (collect -> export -> aggregate)., _read_latest_window(), task_run_intraday_data_pipeline()
 
-### Community 68 - "Community 68"
+### Community 69 - "Community 69"
 Cohesion: 0.5
 Nodes (1): Add created_at to User and Item  Revision ID: fe56fa70289e Revises: 1a31ce608336
 
-### Community 69 - "Community 69"
+### Community 70 - "Community 70"
 Cohesion: 0.5
 Nodes (1): Edit replace id integers in all models to use UUID instead  Revision ID: d98dd8e
 
-### Community 70 - "Community 70"
+### Community 71 - "Community 71"
 Cohesion: 0.5
 Nodes (1): Add max length for string(varchar) fields in User and Items models  Revision ID:
 
-### Community 71 - "Community 71"
+### Community 72 - "Community 72"
 Cohesion: 0.5
 Nodes (1): Add market module tables  Revision ID: 15d4dbd21947 Revises: fe56fa70289e Create
 
-### Community 72 - "Community 72"
+### Community 73 - "Community 73"
 Cohesion: 0.5
 Nodes (1): Initialize models  Revision ID: e2412789c190 Revises: Create Date: 2023-11-24 22
 
-### Community 73 - "Community 73"
+### Community 74 - "Community 74"
 Cohesion: 0.5
 Nodes (1): Add cascade delete relationships  Revision ID: 1a31ce608336 Revises: d98dd8ec85a
 
-### Community 74 - "Community 74"
+### Community 75 - "Community 75"
 Cohesion: 0.5
 Nodes (1): baseline schema  Revision ID: 20260312_0001 Revises: Create Date: 2026-03-12 00:
 
-### Community 75 - "Community 75"
-Cohesion: 1.0
-Nodes (2): export_all_data(), get_db_engine()
-
 ### Community 76 - "Community 76"
 Cohesion: 1.0
-Nodes (2): main(), parse_args()
+Nodes (2): export_all_data(), get_db_engine()
 
 ### Community 77 - "Community 77"
 Cohesion: 1.0
@@ -536,23 +541,23 @@ Nodes (2): main(), parse_args()
 
 ### Community 79 - "Community 79"
 Cohesion: 1.0
-Nodes (2): clean_and_import(), get_active_tickers()
+Nodes (2): main(), parse_args()
 
 ### Community 80 - "Community 80"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): clean_and_import(), get_active_tickers()
 
 ### Community 81 - "Community 81"
 Cohesion: 0.67
-Nodes (1): daily_drac_training_dag.py Airflow DAG — daily at 2:30 AM UTC. SSH into DRAC → s
+Nodes (0): 
 
 ### Community 82 - "Community 82"
 Cohesion: 0.67
-Nodes (2): insert_historical_market_data(), Inserts a single historical market data record into staging.market_data.     VWA
+Nodes (1): daily_drac_training_dag.py Airflow DAG — daily at 2:30 AM UTC. SSH into DRAC → s
 
 ### Community 83 - "Community 83"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (2): insert_historical_market_data(), Inserts a single historical market data record into staging.market_data.     VWA
 
 ### Community 84 - "Community 84"
 Cohesion: 0.67
@@ -563,20 +568,20 @@ Cohesion: 0.67
 Nodes (0): 
 
 ### Community 86 - "Community 86"
-Cohesion: 1.0
-Nodes (2): init(), main()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 87 - "Community 87"
 Cohesion: 1.0
 Nodes (2): init(), main()
 
 ### Community 88 - "Community 88"
-Cohesion: 0.67
-Nodes (1): Utility modules for data collection workflows.
+Cohesion: 1.0
+Nodes (2): init(), main()
 
 ### Community 89 - "Community 89"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (1): Utility modules for data collection workflows.
 
 ### Community 90 - "Community 90"
 Cohesion: 1.0
@@ -636,7 +641,7 @@ Nodes (0):
 
 ### Community 104 - "Community 104"
 Cohesion: 1.0
-Nodes (1): Stock configuration for seeding and testing.  To add or remove stocks, simply mo
+Nodes (0): 
 
 ### Community 105 - "Community 105"
 Cohesion: 1.0
@@ -644,7 +649,7 @@ Nodes (0):
 
 ### Community 106 - "Community 106"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Stock configuration for seeding and testing.  To add or remove stocks, simply mo
 
 ### Community 107 - "Community 107"
 Cohesion: 1.0
@@ -752,11 +757,11 @@ Nodes (0):
 
 ### Community 133 - "Community 133"
 Cohesion: 1.0
-Nodes (1): Run inference on a single prepared feature row.
+Nodes (0): 
 
 ### Community 134 - "Community 134"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Run inference on a single prepared feature row.
 
 ### Community 135 - "Community 135"
 Cohesion: 1.0
@@ -780,369 +785,397 @@ Nodes (0):
 
 ### Community 140 - "Community 140"
 Cohesion: 1.0
-Nodes (1): Return the latest timestamp in market."{ticker}", or None if empty.
+Nodes (0): 
 
 ### Community 141 - "Community 141"
 Cohesion: 1.0
-Nodes (1): Download one 5-min chunk from FMP. Returns DataFrame or None.
+Nodes (1): Return the step_00 row for a symbol (used as base-model view).
 
 ### Community 142 - "Community 142"
 Cohesion: 1.0
-Nodes (1): Download and insert missing rows for one ticker. Returns rows inserted.
+Nodes (1): Return (predictions row, step_info dict) for a symbol at a given step.
 
 ### Community 143 - "Community 143"
 Cohesion: 1.0
-Nodes (1): Download 5-minute data from FMP API in chunks.
+Nodes (1): Return all symbols for a step, sorted by predicted_full_day_return descending.
 
 ### Community 144 - "Community 144"
 Cohesion: 1.0
-Nodes (1): Append a usage record to the JSONL meter log (one JSON object per line).
+Nodes (1): Re-initialise from disk — picks up a newly promoted current_simulation symlink.
 
 ### Community 145 - "Community 145"
 Cohesion: 1.0
-Nodes (1): Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces
+Nodes (1): Return the latest timestamp in market."{ticker}", or None if empty.
 
 ### Community 146 - "Community 146"
 Cohesion: 1.0
-Nodes (1): Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval
+Nodes (1): Download one 5-min chunk from FMP. Returns DataFrame or None.
 
 ### Community 147 - "Community 147"
 Cohesion: 1.0
-Nodes (1): Atomically update a symlink via Linux rename() — uses relative path for Docker c
+Nodes (1): Download and insert missing rows for one ticker. Returns rows inserted.
 
 ### Community 148 - "Community 148"
 Cohesion: 1.0
-Nodes (1): Collect VPS hardware metrics via psutil.
+Nodes (1): Download 5-minute data from FMP API in chunks.
 
 ### Community 149 - "Community 149"
 Cohesion: 1.0
-Nodes (1): Fetch live squeue + recent sacct from NIBI when socket is alive.
+Nodes (1): Append a usage record to the JSONL meter log (one JSON object per line).
 
 ### Community 150 - "Community 150"
 Cohesion: 1.0
-Nodes (1): Pick a primary live job for top-card display: RUNNING first, then PENDING.
+Nodes (1): Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces
 
 ### Community 151 - "Community 151"
 Cohesion: 1.0
-Nodes (1): Lightweight market-hours state (NYSE regular session).     Note: holiday-aware p
+Nodes (1): Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval
 
 ### Community 152 - "Community 152"
 Cohesion: 1.0
-Nodes (1): Normalize freshness into explicit states to avoid off-hours false alarms.
+Nodes (1): Atomically update a symlink via Linux rename() — uses relative path for Docker c
 
 ### Community 153 - "Community 153"
 Cohesion: 1.0
-Nodes (1): Query nvidia-smi on the NIBI node (only if socket is alive and a job is running)
+Nodes (1): Collect VPS hardware metrics via psutil.
 
 ### Community 154 - "Community 154"
 Cohesion: 1.0
-Nodes (1): Full ops snapshot — called by the Streamlit dashboard on page load.     Returns
+Nodes (1): Fetch live squeue + recent sacct from NIBI when socket is alive.
 
 ### Community 155 - "Community 155"
 Cohesion: 1.0
-Nodes (1): Quick check: is the ControlMaster socket alive?
+Nodes (1): Pick a primary live job for top-card display: RUNNING first, then PENDING.
 
 ### Community 156 - "Community 156"
 Cohesion: 1.0
-Nodes (1): Execute a read-only command on NIBI via the ControlMaster socket.     Only white
+Nodes (1): Lightweight market-hours state (NYSE regular session).     Note: holiday-aware p
 
 ### Community 157 - "Community 157"
 Cohesion: 1.0
-Nodes (1): Last N rows from operation_logs.pipeline_logs — collector pipeline history.
+Nodes (1): Normalize freshness into explicit states to avoid off-hours false alarms.
 
 ### Community 158 - "Community 158"
 Cohesion: 1.0
-Nodes (1): Trigger auto_login.py to re-establish the SSH ControlMaster socket.      Behavio
+Nodes (1): Query nvidia-smi on the NIBI node (only if socket is alive and a job is running)
 
 ### Community 159 - "Community 159"
 Cohesion: 1.0
-Nodes (1): Query Airflow metadata DB for DAG statuses and recent run history.
+Nodes (1): Full ops snapshot — called by the Streamlit dashboard on page load.     Returns
 
 ### Community 160 - "Community 160"
 Cohesion: 1.0
-Nodes (1): DAG statuses and recent run history from the Airflow metadata database.
+Nodes (1): Quick check: is the ControlMaster socket alive?
 
 ### Community 161 - "Community 161"
 Cohesion: 1.0
-Nodes (1): Return the last N lines of a known log file.     log_name: pipeline_15m | warm_r
+Nodes (1): Execute a read-only command on NIBI via the ControlMaster socket.     Only white
 
 ### Community 162 - "Community 162"
 Cohesion: 1.0
-Nodes (1): Latest window_ts and row count from ml.market_data_15m.
+Nodes (1): Last N rows from operation_logs.pipeline_logs — collector pipeline history.
 
 ### Community 163 - "Community 163"
 Cohesion: 1.0
-Nodes (1): Fetch live squeue + recent sacct from NIBI when socket is alive.
+Nodes (1): Trigger auto_login.py to re-establish the SSH ControlMaster socket.      Behavio
 
 ### Community 164 - "Community 164"
 Cohesion: 1.0
-Nodes (1): Pick a primary live job for top-card display: RUNNING first, then PENDING.
+Nodes (1): Query Airflow metadata DB for DAG statuses and recent run history.
 
 ### Community 165 - "Community 165"
 Cohesion: 1.0
-Nodes (1): Lightweight market-hours state (NYSE regular session).     Note: holiday-aware p
+Nodes (1): DAG statuses and recent run history from the Airflow metadata database.
 
 ### Community 166 - "Community 166"
 Cohesion: 1.0
-Nodes (1): Normalize freshness into explicit states to avoid off-hours false alarms.
+Nodes (1): Return the last N lines of a known log file.     log_name: pipeline_15m | warm_r
 
 ### Community 167 - "Community 167"
 Cohesion: 1.0
-Nodes (1): Query nvidia-smi on the NIBI node (only if socket is alive and a job is running)
+Nodes (1): Latest window_ts and row count from ml.market_data_15m.
 
 ### Community 168 - "Community 168"
 Cohesion: 1.0
-Nodes (1): Full ops snapshot — called by the Streamlit dashboard on page load.     Returns
+Nodes (1): Fetch live squeue + recent sacct from NIBI when socket is alive.
 
 ### Community 169 - "Community 169"
 Cohesion: 1.0
-Nodes (1): Quick check: is the ControlMaster socket alive?
+Nodes (1): Pick a primary live job for top-card display: RUNNING first, then PENDING.
 
 ### Community 170 - "Community 170"
 Cohesion: 1.0
-Nodes (1): Execute a read-only command on NIBI via the ControlMaster socket.     Only white
+Nodes (1): Lightweight market-hours state (NYSE regular session).     Note: holiday-aware p
 
 ### Community 171 - "Community 171"
 Cohesion: 1.0
-Nodes (1): Last N rows from operation_logs.pipeline_logs — collector pipeline history.
+Nodes (1): Normalize freshness into explicit states to avoid off-hours false alarms.
 
 ### Community 172 - "Community 172"
 Cohesion: 1.0
-Nodes (1): Trigger auto_login.py to re-establish the SSH ControlMaster socket.      Behavio
+Nodes (1): Query nvidia-smi on the NIBI node (only if socket is alive and a job is running)
 
 ### Community 173 - "Community 173"
 Cohesion: 1.0
-Nodes (1): Query Airflow metadata DB for DAG statuses and recent run history.
+Nodes (1): Full ops snapshot — called by the Streamlit dashboard on page load.     Returns
 
 ### Community 174 - "Community 174"
 Cohesion: 1.0
-Nodes (1): DAG statuses and recent run history from the Airflow metadata database.
+Nodes (1): Quick check: is the ControlMaster socket alive?
 
 ### Community 175 - "Community 175"
 Cohesion: 1.0
-Nodes (1): Return the last N lines of a known log file.     log_name: pipeline_15m | warm_r
+Nodes (1): Execute a read-only command on NIBI via the ControlMaster socket.     Only white
 
 ### Community 176 - "Community 176"
 Cohesion: 1.0
-Nodes (1): Latest window_ts and row count from ml.market_data_15m.
+Nodes (1): Last N rows from operation_logs.pipeline_logs — collector pipeline history.
 
 ### Community 177 - "Community 177"
 Cohesion: 1.0
-Nodes (1): Append a usage record to the JSONL meter log (one JSON object per line).
+Nodes (1): Trigger auto_login.py to re-establish the SSH ControlMaster socket.      Behavio
 
 ### Community 178 - "Community 178"
 Cohesion: 1.0
-Nodes (1): Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces
+Nodes (1): Query Airflow metadata DB for DAG statuses and recent run history.
 
 ### Community 179 - "Community 179"
 Cohesion: 1.0
-Nodes (1): Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval
+Nodes (1): DAG statuses and recent run history from the Airflow metadata database.
 
 ### Community 180 - "Community 180"
+Cohesion: 1.0
+Nodes (1): Return the last N lines of a known log file.     log_name: pipeline_15m | warm_r
+
+### Community 181 - "Community 181"
+Cohesion: 1.0
+Nodes (1): Latest window_ts and row count from ml.market_data_15m.
+
+### Community 182 - "Community 182"
+Cohesion: 1.0
+Nodes (1): Append a usage record to the JSONL meter log (one JSON object per line).
+
+### Community 183 - "Community 183"
+Cohesion: 1.0
+Nodes (1): Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces
+
+### Community 184 - "Community 184"
+Cohesion: 1.0
+Nodes (1): Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval
+
+### Community 185 - "Community 185"
 Cohesion: 1.0
 Nodes (1): Atomically update a symlink via Linux rename() — uses relative path for Docker c
 
 ## Knowledge Gaps
-- **293 isolated node(s):** `TEST 03 — Collector import regression ───────────────────────────────────── Prot`, `Submit one 8-hour job, poll until done. Returns job_id.`, `TEST 01 — Stage 1: Raw Ingest → stg_raw.market_data ────────────────────────────`, `Remove test rows before and after each test.`, `TEST — NIBI HPC Connectivity ────────────────────────────── Tests the full manua` (+288 more)
+- **300 isolated node(s):** `TEST 03 — Collector import regression ───────────────────────────────────── Prot`, `Submit one 8-hour job, poll until done. Returns job_id.`, `TEST 01 — Stage 1: Raw Ingest → stg_raw.market_data ────────────────────────────`, `Remove test rows before and after each test.`, `TEST — NIBI HPC Connectivity ────────────────────────────── Tests the full manua` (+295 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 89`** (2 nodes): `get_db()`, `database.py`
+- **Thin community `Community 90`** (2 nodes): `get_db()`, `database.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 90`** (2 nodes): `ingest_historical_single()`, `historical_ingestion.py`
+- **Thin community `Community 91`** (2 nodes): `ingest_historical_single()`, `historical_ingestion.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 91`** (2 nodes): `ingest_single()`, `ingestion.py`
+- **Thin community `Community 92`** (2 nodes): `ingest_single()`, `ingestion.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 92`** (2 nodes): `insert_market_data()`, `ingestion_service.py`
+- **Thin community `Community 93`** (2 nodes): `insert_market_data()`, `ingestion_service.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 93`** (2 nodes): `Overview.tsx`, `Overview()`
+- **Thin community `Community 94`** (2 nodes): `Overview.tsx`, `Overview()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 94`** (2 nodes): `Predictions.tsx`, `handleGenerate()`
+- **Thin community `Community 95`** (2 nodes): `Simulation.tsx`, `onKey()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (2 nodes): `ProgressBar.tsx`, `ProgressBar()`
+- **Thin community `Community 96`** (2 nodes): `Predictions.tsx`, `handleGenerate()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 96`** (2 nodes): `CandlestickChart()`, `CandlestickChart.tsx`
+- **Thin community `Community 97`** (2 nodes): `ProgressBar.tsx`, `ProgressBar()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 97`** (2 nodes): `Layout.tsx`, `Layout()`
+- **Thin community `Community 98`** (2 nodes): `CandlestickChart()`, `CandlestickChart.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 98`** (2 nodes): `StatusBadge.tsx`, `StatusBadge()`
+- **Thin community `Community 99`** (2 nodes): `Layout.tsx`, `Layout()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 99`** (2 nodes): `MetricCard.tsx`, `MetricCard()`
+- **Thin community `Community 100`** (2 nodes): `StatusBadge.tsx`, `StatusBadge()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 100`** (2 nodes): `LogViewer.tsx`, `LogViewer()`
+- **Thin community `Community 101`** (2 nodes): `MetricCard.tsx`, `MetricCard()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 101`** (2 nodes): `custom_generate_unique_id()`, `main.py`
+- **Thin community `Community 102`** (2 nodes): `LogViewer.tsx`, `LogViewer()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 102`** (2 nodes): `utils.py`, `health_check()`
+- **Thin community `Community 103`** (2 nodes): `custom_generate_unique_id()`, `main.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 103`** (2 nodes): `get_db()`, `deps.py`
+- **Thin community `Community 104`** (2 nodes): `utils.py`, `health_check()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 104`** (2 nodes): `stock_config.py`, `Stock configuration for seeding and testing.  To add or remove stocks, simply mo`
+- **Thin community `Community 105`** (2 nodes): `get_db()`, `deps.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 105`** (2 nodes): `drop_market_schema()`, `drop_schema.py`
+- **Thin community `Community 106`** (2 nodes): `stock_config.py`, `Stock configuration for seeding and testing.  To add or remove stocks, simply mo`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 106`** (1 nodes): `greenlet.h`
+- **Thin community `Community 107`** (2 nodes): `drop_market_schema()`, `drop_schema.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 107`** (1 nodes): `__init__.py`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 108`** (1 nodes): `__init__.py`
+- **Thin community `Community 108`** (1 nodes): `greenlet.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 109`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 110`** (1 nodes): `test_db_connection.py`
+- **Thin community `Community 110`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 111`** (1 nodes): `check_data_granularity.py`
+- **Thin community `Community 111`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 112`** (1 nodes): `check_db.py`
+- **Thin community `Community 112`** (1 nodes): `test_db_connection.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 113`** (1 nodes): `update_notebook_lgbm.py`
+- **Thin community `Community 113`** (1 nodes): `check_data_granularity.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 114`** (1 nodes): `inspect_data.py`
+- **Thin community `Community 114`** (1 nodes): `check_db.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 115`** (1 nodes): `__init__.py`
+- **Thin community `Community 115`** (1 nodes): `update_notebook_lgbm.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 116`** (1 nodes): `daily_dataset_snapshot_dag.py`
+- **Thin community `Community 116`** (1 nodes): `inspect_data.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 117`** (1 nodes): `main.py`
+- **Thin community `Community 117`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 118`** (1 nodes): `__init__.py`
+- **Thin community `Community 118`** (1 nodes): `daily_dataset_snapshot_dag.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 119`** (1 nodes): `eslint.config.js`
+- **Thin community `Community 119`** (1 nodes): `main.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 120`** (1 nodes): `vite.config.ts`
+- **Thin community `Community 120`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (1 nodes): `index.ts`
+- **Thin community `Community 121`** (1 nodes): `eslint.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 122`** (1 nodes): `Stocks.tsx`
+- **Thin community `Community 122`** (1 nodes): `vite.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 123`** (1 nodes): `Ops.tsx`
+- **Thin community `Community 123`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (1 nodes): `index.tsx`
+- **Thin community `Community 124`** (1 nodes): `Stocks.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (1 nodes): `Simulation.tsx`
+- **Thin community `Community 125`** (1 nodes): `Ops.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 126`** (1 nodes): `client.ts`
+- **Thin community `Community 126`** (1 nodes): `index.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 127`** (1 nodes): `index.ts`
+- **Thin community `Community 127`** (1 nodes): `client.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (1 nodes): `Sidebar.tsx`
+- **Thin community `Community 128`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 129`** (1 nodes): `DataTable.tsx`
+- **Thin community `Community 129`** (1 nodes): `Sidebar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 130`** (1 nodes): `models.py`
+- **Thin community `Community 130`** (1 nodes): `DataTable.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 131`** (1 nodes): `__init__.py`
+- **Thin community `Community 131`** (1 nodes): `models.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 132`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 133`** (1 nodes): `Run inference on a single prepared feature row.`
+- **Thin community `Community 133`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 134`** (1 nodes): `__init__.py`
+- **Thin community `Community 134`** (1 nodes): `Run inference on a single prepared feature row.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 135`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 136`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 137`** (1 nodes): `main.py`
+- **Thin community `Community 137`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 138`** (1 nodes): `__init__.py`
+- **Thin community `Community 138`** (1 nodes): `main.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 139`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 140`** (1 nodes): `Return the latest timestamp in market."{ticker}", or None if empty.`
+- **Thin community `Community 140`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 141`** (1 nodes): `Download one 5-min chunk from FMP. Returns DataFrame or None.`
+- **Thin community `Community 141`** (1 nodes): `Return the step_00 row for a symbol (used as base-model view).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 142`** (1 nodes): `Download and insert missing rows for one ticker. Returns rows inserted.`
+- **Thin community `Community 142`** (1 nodes): `Return (predictions row, step_info dict) for a symbol at a given step.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 143`** (1 nodes): `Download 5-minute data from FMP API in chunks.`
+- **Thin community `Community 143`** (1 nodes): `Return all symbols for a step, sorted by predicted_full_day_return descending.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 144`** (1 nodes): `Append a usage record to the JSONL meter log (one JSON object per line).`
+- **Thin community `Community 144`** (1 nodes): `Re-initialise from disk — picks up a newly promoted current_simulation symlink.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 145`** (1 nodes): `Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces`
+- **Thin community `Community 145`** (1 nodes): `Return the latest timestamp in market."{ticker}", or None if empty.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 146`** (1 nodes): `Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval`
+- **Thin community `Community 146`** (1 nodes): `Download one 5-min chunk from FMP. Returns DataFrame or None.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 147`** (1 nodes): `Atomically update a symlink via Linux rename() — uses relative path for Docker c`
+- **Thin community `Community 147`** (1 nodes): `Download and insert missing rows for one ticker. Returns rows inserted.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 148`** (1 nodes): `Collect VPS hardware metrics via psutil.`
+- **Thin community `Community 148`** (1 nodes): `Download 5-minute data from FMP API in chunks.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 149`** (1 nodes): `Fetch live squeue + recent sacct from NIBI when socket is alive.`
+- **Thin community `Community 149`** (1 nodes): `Append a usage record to the JSONL meter log (one JSON object per line).`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 150`** (1 nodes): `Pick a primary live job for top-card display: RUNNING first, then PENDING.`
+- **Thin community `Community 150`** (1 nodes): `Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 151`** (1 nodes): `Lightweight market-hours state (NYSE regular session).     Note: holiday-aware p`
+- **Thin community `Community 151`** (1 nodes): `Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 152`** (1 nodes): `Normalize freshness into explicit states to avoid off-hours false alarms.`
+- **Thin community `Community 152`** (1 nodes): `Atomically update a symlink via Linux rename() — uses relative path for Docker c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 153`** (1 nodes): `Query nvidia-smi on the NIBI node (only if socket is alive and a job is running)`
+- **Thin community `Community 153`** (1 nodes): `Collect VPS hardware metrics via psutil.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 154`** (1 nodes): `Full ops snapshot — called by the Streamlit dashboard on page load.     Returns`
+- **Thin community `Community 154`** (1 nodes): `Fetch live squeue + recent sacct from NIBI when socket is alive.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 155`** (1 nodes): `Quick check: is the ControlMaster socket alive?`
+- **Thin community `Community 155`** (1 nodes): `Pick a primary live job for top-card display: RUNNING first, then PENDING.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 156`** (1 nodes): `Execute a read-only command on NIBI via the ControlMaster socket.     Only white`
+- **Thin community `Community 156`** (1 nodes): `Lightweight market-hours state (NYSE regular session).     Note: holiday-aware p`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 157`** (1 nodes): `Last N rows from operation_logs.pipeline_logs — collector pipeline history.`
+- **Thin community `Community 157`** (1 nodes): `Normalize freshness into explicit states to avoid off-hours false alarms.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 158`** (1 nodes): `Trigger auto_login.py to re-establish the SSH ControlMaster socket.      Behavio`
+- **Thin community `Community 158`** (1 nodes): `Query nvidia-smi on the NIBI node (only if socket is alive and a job is running)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 159`** (1 nodes): `Query Airflow metadata DB for DAG statuses and recent run history.`
+- **Thin community `Community 159`** (1 nodes): `Full ops snapshot — called by the Streamlit dashboard on page load.     Returns`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 160`** (1 nodes): `DAG statuses and recent run history from the Airflow metadata database.`
+- **Thin community `Community 160`** (1 nodes): `Quick check: is the ControlMaster socket alive?`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 161`** (1 nodes): `Return the last N lines of a known log file.     log_name: pipeline_15m | warm_r`
+- **Thin community `Community 161`** (1 nodes): `Execute a read-only command on NIBI via the ControlMaster socket.     Only white`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 162`** (1 nodes): `Latest window_ts and row count from ml.market_data_15m.`
+- **Thin community `Community 162`** (1 nodes): `Last N rows from operation_logs.pipeline_logs — collector pipeline history.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 163`** (1 nodes): `Fetch live squeue + recent sacct from NIBI when socket is alive.`
+- **Thin community `Community 163`** (1 nodes): `Trigger auto_login.py to re-establish the SSH ControlMaster socket.      Behavio`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 164`** (1 nodes): `Pick a primary live job for top-card display: RUNNING first, then PENDING.`
+- **Thin community `Community 164`** (1 nodes): `Query Airflow metadata DB for DAG statuses and recent run history.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 165`** (1 nodes): `Lightweight market-hours state (NYSE regular session).     Note: holiday-aware p`
+- **Thin community `Community 165`** (1 nodes): `DAG statuses and recent run history from the Airflow metadata database.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 166`** (1 nodes): `Normalize freshness into explicit states to avoid off-hours false alarms.`
+- **Thin community `Community 166`** (1 nodes): `Return the last N lines of a known log file.     log_name: pipeline_15m | warm_r`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 167`** (1 nodes): `Query nvidia-smi on the NIBI node (only if socket is alive and a job is running)`
+- **Thin community `Community 167`** (1 nodes): `Latest window_ts and row count from ml.market_data_15m.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 168`** (1 nodes): `Full ops snapshot — called by the Streamlit dashboard on page load.     Returns`
+- **Thin community `Community 168`** (1 nodes): `Fetch live squeue + recent sacct from NIBI when socket is alive.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 169`** (1 nodes): `Quick check: is the ControlMaster socket alive?`
+- **Thin community `Community 169`** (1 nodes): `Pick a primary live job for top-card display: RUNNING first, then PENDING.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 170`** (1 nodes): `Execute a read-only command on NIBI via the ControlMaster socket.     Only white`
+- **Thin community `Community 170`** (1 nodes): `Lightweight market-hours state (NYSE regular session).     Note: holiday-aware p`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 171`** (1 nodes): `Last N rows from operation_logs.pipeline_logs — collector pipeline history.`
+- **Thin community `Community 171`** (1 nodes): `Normalize freshness into explicit states to avoid off-hours false alarms.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 172`** (1 nodes): `Trigger auto_login.py to re-establish the SSH ControlMaster socket.      Behavio`
+- **Thin community `Community 172`** (1 nodes): `Query nvidia-smi on the NIBI node (only if socket is alive and a job is running)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 173`** (1 nodes): `Query Airflow metadata DB for DAG statuses and recent run history.`
+- **Thin community `Community 173`** (1 nodes): `Full ops snapshot — called by the Streamlit dashboard on page load.     Returns`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 174`** (1 nodes): `DAG statuses and recent run history from the Airflow metadata database.`
+- **Thin community `Community 174`** (1 nodes): `Quick check: is the ControlMaster socket alive?`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 175`** (1 nodes): `Return the last N lines of a known log file.     log_name: pipeline_15m | warm_r`
+- **Thin community `Community 175`** (1 nodes): `Execute a read-only command on NIBI via the ControlMaster socket.     Only white`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 176`** (1 nodes): `Latest window_ts and row count from ml.market_data_15m.`
+- **Thin community `Community 176`** (1 nodes): `Last N rows from operation_logs.pipeline_logs — collector pipeline history.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 177`** (1 nodes): `Append a usage record to the JSONL meter log (one JSON object per line).`
+- **Thin community `Community 177`** (1 nodes): `Trigger auto_login.py to re-establish the SSH ControlMaster socket.      Behavio`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 178`** (1 nodes): `Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces`
+- **Thin community `Community 178`** (1 nodes): `Query Airflow metadata DB for DAG statuses and recent run history.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 179`** (1 nodes): `Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval`
+- **Thin community `Community 179`** (1 nodes): `DAG statuses and recent run history from the Airflow metadata database.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 180`** (1 nodes): `Atomically update a symlink via Linux rename() — uses relative path for Docker c`
+- **Thin community `Community 180`** (1 nodes): `Return the last N lines of a known log file.     log_name: pipeline_15m | warm_r`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 181`** (1 nodes): `Latest window_ts and row count from ml.market_data_15m.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 182`** (1 nodes): `Append a usage record to the JSONL meter log (one JSON object per line).`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 183`** (1 nodes): `Run a command on NIBI via the existing ControlMaster socket.      NIBI enforces`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 184`** (1 nodes): `Polls a Slurm job on NIBI until it reaches a terminal state.      poke_interval`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 185`** (1 nodes): `Atomically update a symlink via Linux rename() — uses relative path for Docker c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Simulation API endpoints.  Provides a replay/demo mode for 2026-04-07 using pre-` connect `Community 0` to `Community 8`, `Community 6`?**
+- **Why does `Simulation API endpoints.  Provides a replay/demo mode for 2026-04-07 using pre-` connect `Community 3` to `Community 25`, `Community 5`, `Community 6`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `ApiError` connect `Community 10` to `Community 8`?**
+- **Why does `ApiError` connect `Community 9` to `Community 6`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
-- **Why does `_request()` connect `Community 8` to `Community 10`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
-- **Are the 24 inferred relationships involving `PipelineLog` (e.g. with `LatestBarGate` and `Run intraday data collection. Returns True on success, False on error.`) actually correct?**
+- **Why does `_request()` connect `Community 6` to `Community 9`?**
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
+- **Are the 24 inferred relationships involving `PipelineLog` (e.g. with `Configure logging after creating or validating the log directory.     Must be ca` and `Return truncate decision and reason using NYSE session close from exchange calen`) actually correct?**
   _`PipelineLog` has 24 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `TEST 03 — Collector import regression ───────────────────────────────────── Prot`, `Submit one 8-hour job, poll until done. Returns job_id.`, `TEST 01 — Stage 1: Raw Ingest → stg_raw.market_data ────────────────────────────` to the rest of the system?**
-  _293 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _300 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

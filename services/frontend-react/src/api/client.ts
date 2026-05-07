@@ -51,8 +51,8 @@ export const api = {
   simHistory: (symbol: string) => 
     apiClient.get<OHLC[]>(`/simulation/history/${symbol.toUpperCase()}`).then(res => res.data),
     
-  simOHLC: (symbol: string) => 
-    apiClient.get<OHLC[]>(`/simulation/ohlc/${symbol.toUpperCase()}`).then(res => res.data),
+  simOHLC: (symbol: string, date?: string) =>
+    apiClient.get<OHLC[]>(`/simulation/ohlc/${symbol.toUpperCase()}`, { params: date ? { date } : {} }).then(res => res.data),
 
   // Ops
   opsStatus: () => apiClient.get<OpsStatus>('/ops/status').then(res => res.data),

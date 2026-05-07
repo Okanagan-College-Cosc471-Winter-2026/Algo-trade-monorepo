@@ -90,7 +90,7 @@ if [[ -f "$LOCAL_PARQUET" ]]; then
     MB=$(du -m "$LOCAL_PARQUET" | cut -f1)
     log "Parquet already exists (${MB} MB) — skipping export"
 else
-    /home/ubuntu/env/bin/python3 - <<PYEOF 2>&1 | tee -a "$LOG"
+    /data/env/bin/python3 - <<PYEOF 2>&1 | tee -a "$LOG"
 import pandas as pd, pyarrow as pa, pyarrow.parquet as pq
 from sqlalchemy import create_engine, text
 from pathlib import Path
@@ -119,7 +119,7 @@ write_status "export_snapshot" "ok" "Parquet snapshot is available"
 # ── STEP 1b: Validate parquet cutoff coverage ────────────────────────────────
 log "=== STEP 1b: Validate parquet cutoff coverage ==="
 write_status "validate_snapshot" "running" "Validating cutoff-day coverage in parquet snapshot"
-/home/ubuntu/env/bin/python3 - <<PYEOF 2>&1 | tee -a "$LOG"
+/data/env/bin/python3 - <<PYEOF 2>&1 | tee -a "$LOG"
 import json
 from pathlib import Path
 

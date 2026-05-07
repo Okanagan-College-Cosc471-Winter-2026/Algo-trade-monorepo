@@ -99,11 +99,13 @@ def get_step_prediction(symbol: str, step: int) -> SimStepResponse:
 @router.get("/history/{symbol}", response_model=list[dict])
 def get_simulation_history(symbol: str, session: SessionDep) -> list[dict]:
     """
-    Return full 15-min OHLC bars for the 5 trading days leading up to and including
-    the simulation date (2026-03-31 → 2026-04-07), regular session only.
-    Used to render the week-in-context candlestick chart.
+    Return 15-min OHLC bars for the 5 trading days leading up to and including
+    current_simulation's replay_date, regular session only.
     """
     from sqlalchemy import text
+    from app.modules.simulation.loader import simulation_loader
+
+    replay_date = simulation_loader.replay_date
 
     rows = session.execute(
         text(
@@ -118,13 +120,19 @@ def get_simulation_history(symbol: str, session: SessionDep) -> list[dict]:
                 volume::bigint
             FROM ml.market_data_15m
             WHERE symbol = :symbol
-              AND trade_date BETWEEN '2026-03-31' AND '2026-04-07'
-              AND window_ts AT TIME ZONE 'America/New_York' >= trade_date + TIME '09:30'
-              AND window_ts AT TIME ZONE 'America/New_York' <= trade_date + TIME '15:45'
+              AND trade_date BETWEEN (
+                  SELECT MIN(d) FROM (
+                      SELECT DISTINCT trade_date AS d FROM ml.market_data_15m
+                      WHERE trade_date <= :replay_date
+                      ORDER BY trade_date DESC LIMIT 5
+                  ) sub
+              ) AND :replay_date
+              AND (window_ts AT TIME ZONE 'America/New_York')::time >= TIME '09:30'
+              AND (window_ts AT TIME ZONE 'America/New_York')::time <= TIME '15:45'
             ORDER BY window_ts ASC
             """
         ),
-        {"symbol": symbol.upper()},
+        {"symbol": symbol.upper(), "replay_date": replay_date},
     ).fetchall()
 
     return [
@@ -158,13 +166,17 @@ def reload_simulation() -> dict:
 
 @router.get("/ohlc/{symbol}", response_model=list[dict])
 def get_simulation_ohlc(
-    symbol: str, session: SessionDep
+    symbol: str, session: SessionDep, date: str | None = None
 ) -> list[dict]:
     """
-    Fetch real 15-min OHLC bars from ml.market_data_15m for the simulation date (2026-04-07),
-    regular session only (09:30–15:45 ET = 13:30–19:45 UTC).
+    Fetch real 15-min OHLC bars for a symbol on the given date (default: replay_date).
+    Accepts ?date=YYYY-MM-DD to fetch today's live bars during trading hours.
+    Regular session only (09:30–15:45 ET).
     """
     from sqlalchemy import text
+    from app.modules.simulation.loader import simulation_loader
+
+    trade_date = date or simulation_loader.replay_date
 
     rows = session.execute(
         text(
@@ -178,13 +190,13 @@ def get_simulation_ohlc(
                 volume::bigint
             FROM ml.market_data_15m
             WHERE symbol = :symbol
-              AND trade_date = '2026-04-07'
-              AND window_ts AT TIME ZONE 'America/New_York' >= '2026-04-07 09:30:00'
-              AND window_ts AT TIME ZONE 'America/New_York' <= '2026-04-07 15:45:00'
+              AND trade_date = :trade_date
+              AND (window_ts AT TIME ZONE 'America/New_York')::time >= TIME '09:30'
+              AND (window_ts AT TIME ZONE 'America/New_York')::time <= TIME '15:45'
             ORDER BY window_ts ASC
             """
         ),
-        {"symbol": symbol.upper()},
+        {"symbol": symbol.upper(), "trade_date": trade_date},
     ).fetchall()
 
     return [

@@ -7,7 +7,7 @@ RUN_ROOT="$REPO/model_artifacts/local_run_root"
 ARTIFACTS="$REPO/model_artifacts"
 DATE=$(date +%Y-%m-%d)
 DEST="$ARTIFACTS/base_$DATE"
-VENV="/home/ubuntu/env"
+VENV="/data/env"
 LOG="$REPO/logs/bootstrap_$DATE.log"
 BACKEND_URL="http://localhost:8000"
 

@@ -143,3 +143,149 @@
   border-top: 1px solid #334155;
   padding-top: 0.5rem;
 }
+
+/* ── Airflow section ── */
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+}
+
+.toggleSmall {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: white;
+  color: #475569;
+  cursor: pointer;
+}
+
+.alertWarn {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.dagTable {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.8125rem;
+}
+
+.dagHeader {
+  display: grid;
+  grid-template-columns: 2.5fr 1.6fr 1fr 1.4fr 0.8fr 1.4fr;
+  background: #f8fafc;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 0.5rem;
+}
+
+.dagRow {
+  display: grid;
+  grid-template-columns: 2.5fr 1.6fr 1fr 1.4fr 0.8fr 1.4fr;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.dagRow:last-child {
+  border-bottom: none;
+}
+
+.dagPaused {
+  opacity: 0.5;
+}
+
+.dagId {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.dagSchedule {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.pausedBadge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
+  background: #f1f5f9;
+  color: #94a3b8;
+  border-radius: 3px;
+  font-family: sans-serif;
+}
+
+.metaMuted {
+  color: #94a3b8;
+}
+
+.subHeading {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.runTable {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.8125rem;
+}
+
+.runHeader {
+  display: grid;
+  grid-template-columns: 2.5fr 0.8fr 0.9fr 1.4fr 0.8fr;
+  background: #f8fafc;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 0.5rem;
+}
+
+.runRow {
+  display: grid;
+  grid-template-columns: 2.5fr 0.8fr 0.9fr 1.4fr 0.8fr;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.runRow:last-child {
+  border-bottom: none;
+}
+
+.runType {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+  background: #f1f5f9;
+  color: #475569;
+  text-align: center;
+  width: fit-content;
+}

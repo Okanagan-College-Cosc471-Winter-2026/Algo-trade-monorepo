@@ -38,7 +38,7 @@ DB_NAME = os.getenv("POSTGRES_DB", os.getenv("OLD_DB_NAME", "market_data"))
 DB_USER = os.getenv("POSTGRES_USER", os.getenv("OLD_DB_USER", "mluser"))
 DB_PASS = os.getenv("POSTGRES_PASSWORD", os.getenv("OLD_DB_PASSWORD", ""))
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(os.getenv("REPO_ROOT", str(Path(__file__).resolve().parents[3])))
 DATASETS_DIR = REPO_ROOT / "datasets"
 ARTIFACTS_DIR = REPO_ROOT / "model_artifacts"
 ML_SRC = REPO_ROOT / "ml" / "ml"
@@ -502,10 +502,144 @@ def task_promote_base_model(**ctx) -> None:
     print(f"Promoted: current_base/current_base_eod → {warm_dir}")
 
 
+def task_generate_base_predictions(**ctx) -> None:
+    """
+    Generate all 26 step prediction CSVs locally using the just-promoted base model.
+
+    Runs on the VPS (no NIBI required) so predictions are ready before market open.
+    Uses the same gen_step_predictions.py logic but invoked via subprocess with the
+    /data/env Python that has xgboost installed.
+
+    Non-fatal: a failure logs a warning but does not block the backend reload.
+    """
+    import shutil
+    import subprocess as sp
+    import tempfile
+
+    import pandas as pd
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    from sqlalchemy import create_engine, text
+
+    sim_date = ctx["ti"].xcom_pull(task_ids="ensure_training_db_coverage", key="effective_sim_date") or ctx["ds"]
+    base_bundle = ARTIFACTS_DIR / "current_base"
+    sim_dest = ARTIFACTS_DIR / f"simulation_{sim_date}"
+
+    try:
+        # ── 1. Export 15-day snapshot to a temp parquet ──────────────────────
+        tmp_dir = Path(tempfile.mkdtemp(prefix=f"base_pred_{sim_date}_"))
+        slice_path = tmp_dir / "slices" / "slice_1945.parquet"
+        slice_path.parent.mkdir(parents=True)
+
+        db_url = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        engine = create_engine(db_url, pool_pre_ping=True)
+        print(f"Pulling 15 trading days from DB for base predictions (sim_date={sim_date}) ...")
+        with engine.connect() as conn:
+            df = pd.read_sql(
+                text("""
+                    SELECT * FROM ml.market_data_15m
+                    WHERE trade_date >= (
+                        SELECT MIN(trade_date) FROM (
+                            SELECT DISTINCT trade_date FROM ml.market_data_15m
+                            ORDER BY trade_date DESC LIMIT 15
+                        ) r
+                    )
+                    ORDER BY symbol, window_ts
+                """),
+                conn,
+            )
+        engine.dispose()
+        pq.write_table(pa.Table.from_pandas(df), slice_path)
+        print(f"  {len(df):,} rows, {df['symbol'].nunique()} symbols → {slice_path}")
+
+        # ── 2. Build per-step dirs with symlinks to base model ───────────────
+        run_root = tmp_dir / "run_root"
+        for i in range(26):
+            step_dir = run_root / f"step_{i:02d}"
+            step_dir.mkdir(parents=True)
+            models_link = step_dir / "models"
+            if not models_link.exists():
+                models_link.symlink_to((base_bundle / "models").resolve())
+            fn_link = step_dir / "feature_names.json"
+            if not fn_link.exists():
+                fn_link.symlink_to((base_bundle / "feature_names.json").resolve())
+            (step_dir / "predictions").mkdir(exist_ok=True)
+
+        # ── 3. Run gen_step_predictions.py ───────────────────────────────────
+        gen_script = REPO_ROOT / "ml" / "ml" / "nibi" / "gen_step_predictions.py"
+        venv_python = Path("/data/env/bin/python3")
+        python_bin = venv_python if venv_python.exists() else Path(sys.executable)
+
+        print(f"Running gen_step_predictions.py for sim_date={sim_date} ...")
+        result = sp.run(
+            [str(python_bin), str(gen_script), "--run-root", str(run_root), "--sim-date", sim_date],
+            capture_output=True, text=True, timeout=3600, cwd=str(REPO_ROOT),
+        )
+        print(result.stdout[-3000:] if result.stdout else "(no stdout)")
+        if result.returncode != 0:
+            raise RuntimeError(f"gen_step_predictions failed (rc={result.returncode}):\n{result.stderr[-1000:]}")
+
+        # ── 4. Copy prediction CSVs to simulation bundle ─────────────────────
+        sim_dest.mkdir(parents=True, exist_ok=True)
+        copied = 0
+        for i in range(26):
+            src = run_root / f"step_{i:02d}" / "predictions" / "predictions.csv"
+            dst_dir = sim_dest / f"step_{i:02d}" / "predictions"
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            if src.exists():
+                shutil.copy2(src, dst_dir / "predictions.csv")
+                copied += 1
+        print(f"Copied {copied}/26 prediction CSVs to {sim_dest}")
+
+        if copied < 26:
+            print(f"WARNING: only {copied}/26 steps have predictions — skipping current_simulation promote")
+            return
+
+        # ── 5. Write simulation_summary.json ─────────────────────────────────
+        import datetime as _dt
+        import json as _json
+
+        base_meta_path = base_bundle / "metadata.json"
+        base_meta = _json.loads(base_meta_path.read_text()) if base_meta_path.exists() else {}
+        d = _dt.date.fromisoformat(sim_date)
+        utc_open = _dt.datetime(d.year, d.month, d.day, 13, 30, tzinfo=_dt.timezone.utc)
+        steps = [
+            {
+                "step": i,
+                "as_of_ts": (_dt.datetime(d.year, d.month, d.day, 13, 30, tzinfo=_dt.timezone.utc)
+                             + _dt.timedelta(minutes=15 * i)).isoformat(),
+                "et_label": (utc_open + _dt.timedelta(minutes=15 * i - 4 * 60)).strftime("%H:%M"),
+                "status": "ok",
+            }
+            for i in range(26)
+        ]
+        summary = {
+            "sim_date": sim_date,
+            "status": "success",
+            "source": "base_model_local",
+            "base_train_sec": base_meta.get("train_sec", 0),
+            "steps": steps,
+        }
+        (sim_dest / "simulation_summary.json").write_text(_json.dumps(summary, indent=2))
+
+        # ── 6. Promote current_simulation ─────────────────────────────────────
+        _atomic_symlink(ARTIFACTS_DIR / "current_simulation", sim_dest)
+        print(f"Promoted: current_simulation → {sim_dest.name}")
+
+    except Exception as exc:
+        print(f"WARNING: generate_base_predictions failed (non-fatal): {exc}")
+    finally:
+        try:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        except Exception:
+            pass
+
+
 def task_reload_backend(**ctx) -> None:
     for endpoint in [
         "/api/v1/inference/admin/reload-model",
         "/api/v1/inference/admin/reload-base-model",
+        "/api/v1/simulation/admin/reload-simulation",
     ]:
         try:
             resp = requests.post(f"{BACKEND_URL}{endpoint}", timeout=30)
@@ -527,7 +661,7 @@ with DAG(
         "email_on_failure": False,
     },
     description="Base-only NIBI training: export → sync → base train → promote current_base/current_base_eod",
-    schedule="0 0 * * 1-5",
+    schedule="0 2 * * 1-5",  # 02:00 UTC = 10 PM ET, safely after intraday warm refresh completes
     start_date=dt.datetime(2026, 5, 4),
     catchup=False,
     max_active_runs=1,
@@ -545,9 +679,10 @@ with DAG(
     t8_validate = PythonOperator(task_id="validate_base_artifacts", python_callable=task_validate_base_artifacts, execution_timeout=dt.timedelta(minutes=5))
     t9_rsync = PythonOperator(task_id="rsync_artifacts_back", python_callable=task_rsync_base_artifacts_back, execution_timeout=dt.timedelta(minutes=30))
     t10_promote = PythonOperator(task_id="promote_base_model", python_callable=task_promote_base_model, execution_timeout=dt.timedelta(minutes=5), retries=0)
+    t10b_gen_preds = PythonOperator(task_id="generate_base_predictions", python_callable=task_generate_base_predictions, execution_timeout=dt.timedelta(hours=1), retries=0)
     t11_reload = PythonOperator(task_id="reload_backend", python_callable=task_reload_backend, execution_timeout=dt.timedelta(minutes=2), retries=0)
 
     t1_health >> [t1b_libs, t1c_db, t3_code]
     t1c_db >> t2_export
     [t1b_libs, t2_export, t3_code] >> t4_parquet
-    t4_parquet >> t5_clean >> t6_submit >> t7_poll >> t8_validate >> t9_rsync >> t10_promote >> t11_reload
+    t4_parquet >> t5_clean >> t6_submit >> t7_poll >> t8_validate >> t9_rsync >> t10_promote >> t10b_gen_preds >> t11_reload

@@ -199,22 +199,25 @@ export interface AirflowStatus {
   dags: Array<{
     dag_id: string;
     is_paused: boolean;
-    last_state: string;
-    last_start: string;
-    last_end: string;
+    is_active: boolean;
     schedule: string;
-    next_run: string;
+    next_run: string | null;
+    last_state: string | null;
+    last_run_type: string | null;
+    last_start: string | null;
+    last_end: string | null;
+    last_run_id: string | null;
   }>;
   recent_runs: Array<{
     dag_id: string;
+    run_id: string;
     state: string;
     run_type: string;
-    started: string;
-    ended: string;
-    duration_s: number;
-    run_id: string;
+    started: string | null;
+    ended: string | null;
+    duration_s: number | null;
   }>;
-  error?: string;
+  error?: string | null;
 }
 
 export interface PipelineLog {

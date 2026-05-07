@@ -45,6 +45,41 @@ _REPLAY_PATH = _ARTIFACTS_ROOT / "current_simulation"
 _STEPS = 26
 
 
+def _normalize_sim_summary(raw: dict) -> dict:
+    """
+    Accept both legacy replay summaries and newer NIBI run_root summaries.
+
+    Legacy keys: replay_date, steps_completed, warm_trees_per_step, steps[].slot_label, base_trees, …
+    Newer keys: sim_date, steps[].et_label (no steps_completed / warm_trees_per_step).
+    """
+    out = dict(raw)
+    if "replay_date" not in out and "sim_date" in out:
+        out["replay_date"] = str(out["sim_date"])
+    steps = list(out.get("steps") or [])
+    if "steps_completed" not in out:
+        out["steps_completed"] = len(steps)
+    if "warm_trees_per_step" not in out:
+        out["warm_trees_per_step"] = 30
+    base_default = int(out.get("base_trees_default") or 1157)
+    wps = int(out["warm_trees_per_step"])
+    fixed_steps: list[dict] = []
+    for s in steps:
+        t = dict(s)
+        if "slot_label" not in t:
+            if "et_label" in t:
+                t["slot_label"] = str(t["et_label"])
+            else:
+                t["slot_label"] = f"Step {t.get('step', '?')}"
+        if "base_trees" not in t:
+            t["base_trees"] = base_default
+        step_idx = int(t["step"])
+        if "total_trees_estimate" not in t:
+            t["total_trees_estimate"] = int(t["base_trees"]) + (step_idx + 1) * wps
+        fixed_steps.append(t)
+    out["steps"] = fixed_steps
+    return out
+
+
 class SimulationLoader:
     """
     Singleton loader for simulation artifacts.
@@ -68,7 +103,7 @@ class SimulationLoader:
 
             # --- Replay simulation summary (step timestamps, tree counts) ---
             with open(_REPLAY_PATH / "simulation_summary.json") as f:
-                self.sim_summary = json.load(f)
+                self.sim_summary = _normalize_sim_summary(json.load(f))
 
             # Build a fast lookup: step_index → step info dict
             self._step_info = {

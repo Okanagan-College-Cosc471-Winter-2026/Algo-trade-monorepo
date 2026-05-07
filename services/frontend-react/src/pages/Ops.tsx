@@ -1,26 +1,57 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import { useApi, useInterval } from '../hooks';
-import { 
-  StatusBadge, 
-  ProgressBar, 
-  LogViewer, 
-  DataTable, 
+import {
+  StatusBadge,
+  ProgressBar,
+  LogViewer,
+  DataTable,
   MetricCard,
   Column
 } from '../components';
-import { PipelineLog, AirflowStatus } from '../types';
+import { AirflowStatus } from '../types';
 import styles from './Ops.module.css';
+
+function stateColor(state: string | null): string {
+  if (!state) return '#94a3b8';
+  const s = state.toLowerCase();
+  if (s === 'success') return '#16a34a';
+  if (s === 'running') return '#0284c7';
+  if (s === 'failed') return '#dc2626';
+  if (s === 'queued') return '#d97706';
+  return '#64748b';
+}
+
+function fmtUTC(ts: string | null): string {
+  if (!ts) return '—';
+  return ts.slice(0, 16).replace('T', ' ');
+}
+
+function fmtDuration(s: number | null): string {
+  if (s == null) return '—';
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return rem ? `${m}m ${rem}s` : `${m}m`;
+}
+
+function cleanSchedule(raw: string | null): string {
+  if (!raw || raw === 'null') return 'manual';
+  return raw.replace(/^"|"$/g, '');
+}
 
 export const Ops: React.FC = () => {
   const { data: status, loading, refresh: refreshStatus } = useApi(() => api.opsStatus());
+  const { data: airflow, refresh: refreshAirflow } = useApi(() => api.opsAirflow());
   const [logs, setLogs] = useState<string[]>([]);
   const [logType, setLogType] = useState<'pipeline_15m' | 'nibi_usage'>('pipeline_15m');
   const [nibiCmd, setNibiCmd] = useState('');
   const [nibiResult, setNibiResult] = useState<{ rc: number; stdout: string; stderr: string } | null>(null);
+  const [showPausedDags, setShowPausedDags] = useState(false);
 
-  // Poll for status every 30 seconds
-  useInterval(refreshStatus, 30000);
+  // Poll status every 30s, airflow every 60s
+  useInterval(refreshStatus, 30_000);
+  useInterval(refreshAirflow, 60_000);
 
   // Fetch logs separately
   const fetchLogs = useCallback(async () => {
@@ -89,6 +120,82 @@ export const Ops: React.FC = () => {
             help={status.data.freshness_reason}
           />
         </div>
+      </section>
+
+      {/* ── Airflow Pipeline Status ── */}
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2>Pipeline Schedule</h2>
+          <button className={styles.toggleSmall} onClick={() => setShowPausedDags(v => !v)}>
+            {showPausedDags ? 'Hide paused' : 'Show paused'}
+          </button>
+        </div>
+
+        {airflow?.error && (
+          <div className={styles.alertWarn}>Airflow API: {airflow.error}</div>
+        )}
+
+        <div className={styles.dagTable}>
+          <div className={styles.dagHeader}>
+            <span>DAG</span>
+            <span>Schedule</span>
+            <span>Last State</span>
+            <span>Last Run (UTC)</span>
+            <span>Duration</span>
+            <span>Next Run (UTC)</span>
+          </div>
+          {(airflow?.dags ?? [])
+            .filter(d => showPausedDags ? true : !d.is_paused)
+            .map(dag => {
+              const dur = dag.last_start && dag.last_end
+                ? Math.round((new Date(dag.last_end).getTime() - new Date(dag.last_start).getTime()) / 1000)
+                : null;
+              return (
+                <div
+                  key={dag.dag_id}
+                  className={`${styles.dagRow} ${dag.is_paused ? styles.dagPaused : ''}`}
+                >
+                  <span className={styles.dagId}>
+                    {dag.dag_id.replace(/_/g, '_​')}
+                    {dag.is_paused && <span className={styles.pausedBadge}>paused</span>}
+                  </span>
+                  <span className={styles.dagSchedule}>{cleanSchedule(dag.schedule)}</span>
+                  <span style={{ color: stateColor(dag.last_state), fontWeight: 600 }}>
+                    {dag.last_state ?? '—'}
+                  </span>
+                  <span>{fmtUTC(dag.last_start)}</span>
+                  <span>{fmtDuration(dur)}</span>
+                  <span className={dag.next_run ? '' : styles.metaMuted}>{fmtUTC(dag.next_run)}</span>
+                </div>
+              );
+            })
+          }
+        </div>
+
+        {/* Recent run history */}
+        {(airflow?.recent_runs?.length ?? 0) > 0 && (
+          <div style={{ marginTop: '1.25rem' }}>
+            <h3 className={styles.subHeading}>Recent Runs</h3>
+            <div className={styles.runTable}>
+              <div className={styles.runHeader}>
+                <span>DAG</span>
+                <span>Type</span>
+                <span>State</span>
+                <span>Started (UTC)</span>
+                <span>Duration</span>
+              </div>
+              {(airflow?.recent_runs ?? []).slice(0, 15).map((r, i) => (
+                <div key={i} className={styles.runRow}>
+                  <span className={styles.dagId}>{r.dag_id.replace(/_/g, '_​')}</span>
+                  <span className={styles.runType}>{r.run_type}</span>
+                  <span style={{ color: stateColor(r.state), fontWeight: 600 }}>{r.state}</span>
+                  <span>{fmtUTC(r.started)}</span>
+                  <span>{fmtDuration(r.duration_s)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className={styles.section}>

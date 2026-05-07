@@ -26,13 +26,19 @@ interface CandlestickChartProps {
   basePrediction?: PredictionData[];
   warmPrediction?: PredictionData[];
   height?: number;
+  visibleFrom?: number;
+  futureStart?: number;
+  currentStep?: number;
 }
 
-export const CandlestickChart: React.FC<CandlestickChartProps> = ({ 
-  data, 
-  basePrediction, 
+export const CandlestickChart: React.FC<CandlestickChartProps> = ({
+  data,
+  basePrediction,
   warmPrediction,
-  height = 500 
+  height = 500,
+  visibleFrom,
+  futureStart,
+  currentStep = 0
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -149,6 +155,21 @@ export const CandlestickChart: React.FC<CandlestickChartProps> = ({
       warmSeriesRef.current = null;
     }
   }, [basePrediction, warmPrediction]);
+
+  // Set visible range to show 5 days + future predictions (~40% width as forecast zone)
+  useEffect(() => {
+    if (!chartRef.current || !visibleFrom || !futureStart) return;
+
+    // Calculate right edge: extend prediction window based on remaining steps (26 total steps)
+    const remainingSteps = 26 - (currentStep ?? 0);
+    const barDurationSec = 15 * 60; // 15 minutes
+    const visibleTo = futureStart + remainingSteps * barDurationSec;
+
+    chartRef.current.timeScale().setVisibleRange({
+      from: visibleFrom as UTCTimestamp,
+      to: visibleTo as UTCTimestamp,
+    });
+  }, [visibleFrom, futureStart, currentStep]);
 
   return <div ref={chartContainerRef} className={styles.container} />;
 };
