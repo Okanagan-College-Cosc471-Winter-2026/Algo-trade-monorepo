@@ -14,13 +14,10 @@ Outputs  →  reports/macro_eda/
 
 from __future__ import annotations
 
-import os
 import sys
-import time
 from pathlib import Path
-from datetime import date, timedelta
+from datetime import date
 
-import requests
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
@@ -31,18 +28,17 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(Path(__file__).parent))
-
-from dotenv import load_dotenv
-load_dotenv(ROOT / ".env")
-load_dotenv(ROOT / "ml" / "ml" / ".env")
-
-FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
-FMP_BASE    = "https://financialmodelingprep.com/stable"
+from fmp_eda_common import (
+    FMP_API_KEY,
+    FMP_INTRADAY_BASE as FMP_BASE,
+    fetch_15m_series,
+    fetch_daily_close_series,
+    load_or_fetch,
+    make_session,
+)
 
 START_DATE  = date(2026, 5, 1)
 END_DATE    = date(2026, 5, 31)
-CHUNK_DAYS  = 5
-DELAY_SEC   = 0.4
 
 MACRO_SYMBOLS = {
     "GCUSD": "Gold ($/oz)",
@@ -55,62 +51,24 @@ MACRO_SYMBOLS = {
     "SHY":   "2yr Treasury ETF",
 }
 
-OUT_DIR         = ROOT / "reports" / "macro_eda"
-BARS_CSV        = OUT_DIR / "macro_15m_may2026.csv"
-TREASURY_CSV    = OUT_DIR / "treasury_rates_may2026.csv"
-TOP29_CSV       = ROOT / "reports" / "top29_eda" / "top29_15m_may2026.csv"
+OUT_DIR          = ROOT / "reports" / "macro_eda"
+BARS_CSV         = OUT_DIR / "macro_15m_may2026.csv"
+DAILY_CLOSE_CSV  = OUT_DIR / "macro_daily_close_may2026.csv"
+TREASURY_CSV     = OUT_DIR / "treasury_rates_may2026.csv"
+TOP29_CSV        = ROOT / "reports" / "top29_eda" / "top29_15m_may2026.csv"
 
 
 # ---------------------------------------------------------------------------
-# Fetch helpers
+# Fetch helpers (15-min bars + daily close come from fmp_eda_common; treasury
+# rates are a macro-EDA-only endpoint so stay local)
 # ---------------------------------------------------------------------------
 
-def _session() -> requests.Session:
-    s = requests.Session()
-    s.headers["User-Agent"] = "algo-trade-macro-eda/1.0"
-    return s
-
-
-def fetch_15m_chunk(session: requests.Session, symbol: str,
-                    from_: date, to: date) -> list[dict]:
-    url    = f"{FMP_BASE}/historical-chart/15min"
-    params = {"symbol": symbol, "from": from_.isoformat(),
-              "to": to.isoformat(), "apikey": FMP_API_KEY}
-    try:
-        r = session.get(url, params=params, timeout=20)
-        r.raise_for_status()
-        data = r.json()
-        if isinstance(data, list):
-            return data
-    except Exception as exc:
-        print(f"  WARN {symbol} {from_}→{to}: {exc}")
-    return []
-
-
-def fetch_15m_symbol(session: requests.Session, symbol: str) -> pd.DataFrame:
-    rows, cur = [], START_DATE
-    while cur <= END_DATE:
-        end = min(cur + timedelta(days=CHUNK_DAYS - 1), END_DATE)
-        rows.extend(fetch_15m_chunk(session, symbol, cur, end))
-        cur = end + timedelta(days=1)
-        time.sleep(DELAY_SEC)
-    if not rows:
-        return pd.DataFrame()
-    df = pd.DataFrame(rows)
-    df["symbol"] = symbol
-    df["ts"] = pd.to_datetime(df["date"])
-    for col in ["open", "high", "low", "close", "volume"]:
-        df[col] = pd.to_numeric(df.get(col, 0), errors="coerce")
-    df = df.dropna(subset=["open", "close"])
-    return df[["symbol", "ts", "open", "high", "low", "close", "volume"]].sort_values("ts").reset_index(drop=True)
-
-
-def fetch_treasury_rates() -> pd.DataFrame:
+def fetch_treasury_rates(session) -> pd.DataFrame:
     url = f"{FMP_BASE}/treasury-rates"
     params = {"from": START_DATE.isoformat(), "to": END_DATE.isoformat(),
               "apikey": FMP_API_KEY}
     try:
-        r = _session().get(url, params=params, timeout=20)
+        r = session.get(url, params=params, timeout=20)
         r.raise_for_status()
         data = r.json()
         if isinstance(data, list) and data:
@@ -321,44 +279,24 @@ def plot_commodity_intraday(df: pd.DataFrame, out: Path) -> None:
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # ── 15-min bars ──────────────────────────────────────────────────────────
-    if BARS_CSV.exists():
-        print(f"Loading cached macro bars from {BARS_CSV.name} ...")
-        df = pd.read_csv(BARS_CSV, parse_dates=["ts"])
-        already = set(df["symbol"].unique())
-        missing = [s for s in MACRO_SYMBOLS if s not in already]
-        if missing:
-            print(f"Fetching missing: {missing}")
-            session = _session()
-            parts   = [df]
-            for sym in missing:
-                print(f"  {sym}")
-                part = fetch_15m_symbol(session, sym)
-                if not part.empty:
-                    parts.append(part)
-            df = pd.concat(parts, ignore_index=True)
-            df.to_csv(BARS_CSV, index=False)
-    else:
-        print(f"Fetching {len(MACRO_SYMBOLS)} macro symbols from FMP ...")
-        session = _session()
-        frames  = []
-        for i, sym in enumerate(MACRO_SYMBOLS, 1):
-            print(f"  [{i}/{len(MACRO_SYMBOLS)}] {sym} — {MACRO_SYMBOLS[sym]}")
-            part = fetch_15m_symbol(session, sym)
-            if part.empty:
-                print(f"    WARNING: no data for {sym}")
-            else:
-                print(f"    {len(part):,} bars")
-                frames.append(part)
-        if not frames:
-            print("ERROR: nothing fetched. Check FMP_API_KEY.")
-            sys.exit(1)
-        df = pd.concat(frames, ignore_index=True)
-        df.to_csv(BARS_CSV, index=False)
-        print(f"Saved {len(df):,} rows → {BARS_CSV}")
+    session = make_session("algo-trade-macro-eda/1.0")
+    symbols = list(MACRO_SYMBOLS)
 
+    # ── 15-min bars (regular session; last bar/day starts 15:45, is NOT the 4pm close) ──
+    df = load_or_fetch(
+        BARS_CSV, symbols, key_col="symbol", start=START_DATE, end=END_DATE,
+        fetch_fn=fetch_15m_series, session=session, label="15-min bars",
+    )
     print(f"\nLoaded {len(df):,} bars for {df['symbol'].nunique()} macro symbols")
     print("Symbols:", sorted(df["symbol"].unique()))
+
+    # ── Official daily close (true 4:00pm print for the equity ETFs; CME daily
+    #    settlement close for the commodities) ─────────────────────────────────
+    daily_close = load_or_fetch(
+        DAILY_CLOSE_CSV, symbols, key_col="symbol", start=START_DATE, end=END_DATE,
+        fetch_fn=fetch_daily_close_series, session=session, label="daily close", date_col="date",
+    )
+    print(f"Loaded {len(daily_close):,} daily closes for {daily_close['symbol'].nunique()} symbols")
 
     # ── Treasury rates ────────────────────────────────────────────────────────
     if TREASURY_CSV.exists():
@@ -366,7 +304,7 @@ def main() -> None:
         treasury = pd.read_csv(TREASURY_CSV, parse_dates=["date"])
     else:
         print("Fetching treasury yield curve ...")
-        treasury = fetch_treasury_rates()
+        treasury = fetch_treasury_rates(session)
         if treasury.empty:
             print("  WARNING: no treasury data")
         else:

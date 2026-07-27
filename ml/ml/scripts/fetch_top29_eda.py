@@ -7,13 +7,10 @@ produces basic EDA charts in reports/top29_eda/.
 
 from __future__ import annotations
 
-import os
 import sys
-import time
 from pathlib import Path
 from datetime import date
 
-import requests
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
@@ -21,18 +18,18 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns
 
+sys.path.insert(0, str(Path(__file__).parent))
+from fmp_eda_common import (
+    fetch_15m_series,
+    fetch_daily_close_series,
+    load_or_fetch,
+    make_session,
+)
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(Path(__file__).parent))
-
-from dotenv import load_dotenv
-load_dotenv(ROOT / ".env")
-load_dotenv(ROOT / "ml" / "ml" / ".env")
-
-FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
-FMP_BASE = "https://financialmodelingprep.com/stable"
 
 # Top-29 by predicted return from warm-refresh model
 TOP29 = [
@@ -45,65 +42,10 @@ TOP29 = [
 
 START_DATE = date(2026, 5, 1)
 END_DATE   = date(2026, 5, 31)
-CHUNK_DAYS = 5       # FMP free tier handles ~5-day chunks well
-DELAY_SEC  = 0.4     # polite rate-limit
 
 OUT_DIR  = ROOT / "reports" / "top29_eda"
 CSV_FILE = OUT_DIR / "top29_15m_may2026.csv"
-
-# ---------------------------------------------------------------------------
-# Fetch helpers
-# ---------------------------------------------------------------------------
-
-def _session() -> requests.Session:
-    s = requests.Session()
-    s.headers["User-Agent"] = "algo-trade-eda/1.0"
-    return s
-
-
-def fetch_chunk(session: requests.Session, symbol: str, from_: date, to: date) -> list[dict]:
-    url = f"{FMP_BASE}/historical-chart/15min"
-    params = {
-        "symbol": symbol,
-        "from":   from_.isoformat(),
-        "to":     to.isoformat(),
-        "apikey": FMP_API_KEY,
-    }
-    try:
-        r = session.get(url, params=params, timeout=20)
-        r.raise_for_status()
-        data = r.json()
-        if isinstance(data, list):
-            return data
-    except Exception as exc:
-        print(f"  WARN {symbol} {from_}→{to}: {exc}")
-    return []
-
-
-def fetch_symbol(session: requests.Session, symbol: str) -> pd.DataFrame:
-    from datetime import timedelta
-    rows = []
-    cur = START_DATE
-    while cur <= END_DATE:
-        chunk_end = min(cur + timedelta(days=CHUNK_DAYS - 1), END_DATE)
-        bars = fetch_chunk(session, symbol, cur, chunk_end)
-        rows.extend(bars)
-        cur = chunk_end + timedelta(days=1)
-        time.sleep(DELAY_SEC)
-
-    if not rows:
-        return pd.DataFrame()
-
-    df = pd.DataFrame(rows)
-    df["symbol"] = symbol
-    df["date"] = pd.to_datetime(df["date"])
-    df = df.rename(columns={"date": "ts"})
-    for col in ["open", "high", "low", "close", "volume"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-    df = df.dropna(subset=["open", "high", "low", "close"])
-    df = df.sort_values("ts").reset_index(drop=True)
-    return df[["symbol", "ts", "open", "high", "low", "close", "volume"]]
-
+DAILY_CLOSE_CSV = OUT_DIR / "top29_daily_close_may2026.csv"
 
 # ---------------------------------------------------------------------------
 # EDA helpers
@@ -235,44 +177,21 @@ def plot_correlation(df: pd.DataFrame, out: Path) -> None:
 
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    session = make_session("algo-trade-eda/1.0")
 
-    # ---- Fetch ----
-    if CSV_FILE.exists():
-        print(f"Loading cached data from {CSV_FILE.name} ...")
-        df = pd.read_csv(CSV_FILE, parse_dates=["ts"])
-        already = set(df["symbol"].unique())
-        missing = [s for s in TOP29 if s not in already]
-        if missing:
-            print(f"Fetching {len(missing)} missing symbols: {missing}")
-            session = _session()
-            parts = [df]
-            for i, sym in enumerate(missing, 1):
-                print(f"  [{i}/{len(missing)}] {sym}")
-                part = fetch_symbol(session, sym)
-                if not part.empty:
-                    parts.append(part)
-            df = pd.concat(parts, ignore_index=True)
-            df.to_csv(CSV_FILE, index=False)
-    else:
-        print(f"Fetching {len(TOP29)} symbols from FMP ({START_DATE} → {END_DATE}) ...")
-        session = _session()
-        frames = []
-        for i, sym in enumerate(TOP29, 1):
-            print(f"  [{i}/{len(TOP29)}] {sym}")
-            part = fetch_symbol(session, sym)
-            if part.empty:
-                print(f"    WARNING: no data for {sym}")
-            else:
-                print(f"    {len(part):,} bars")
-                frames.append(part)
-        if not frames:
-            print("ERROR: No data fetched at all. Check FMP API key.")
-            sys.exit(1)
-        df = pd.concat(frames, ignore_index=True)
-        df.to_csv(CSV_FILE, index=False)
-        print(f"\nSaved {len(df):,} rows → {CSV_FILE}")
-
+    # ---- 15-min bars (regular session; last bar per day starts 15:45, is NOT the 4pm close) ----
+    df = load_or_fetch(
+        CSV_FILE, TOP29, key_col="symbol", start=START_DATE, end=END_DATE,
+        fetch_fn=fetch_15m_series, session=session, label="15-min bars",
+    )
     print(f"\nLoaded {len(df):,} bars for {df['symbol'].nunique()} symbols")
+
+    # ---- Official daily close (true 4:00pm print, joined on symbol+date) ----
+    daily_close = load_or_fetch(
+        DAILY_CLOSE_CSV, TOP29, key_col="symbol", start=START_DATE, end=END_DATE,
+        fetch_fn=fetch_daily_close_series, session=session, label="daily close", date_col="date",
+    )
+    print(f"Loaded {len(daily_close):,} daily closes for {daily_close['symbol'].nunique()} symbols")
 
     # ---- Stats ----
     stats = compute_stats(df)
